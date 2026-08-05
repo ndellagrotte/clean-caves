@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cleanroom": {
+      "type": "stdio",
+      "command": "cleanroom-modding-mcp"
+    }
+  }
+}

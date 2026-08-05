@@ -1,0 +1,2 @@
+# Clean Caves has no translatable UI; all command output is generated text.
+# This file exists so Forge does not warn about a missing language file.
