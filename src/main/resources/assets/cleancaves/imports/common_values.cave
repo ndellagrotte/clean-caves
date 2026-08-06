@@ -1,0 +1,58 @@
+{
+  # Vanilla-only replacement for the original modded NATURAL_STONE list.
+  # Used as replaceableBlocks / wall-decorator matchers so that caves and
+  # decorators cut through every block placed by the stone_layers presets.
+  NATURAL_STONE: [
+    # Vanilla stone variants
+    minecraft:stone
+    minecraft:stone:1
+    minecraft:stone:2
+    minecraft:stone:3
+    minecraft:stone:4
+    minecraft:stone:5
+    minecraft:stone:6
+    # Dirt and grass
+    minecraft:dirt
+    minecraft:dirt:1
+    minecraft:dirt:2
+    minecraft:grass
+    minecraft:mycelium
+    # Sand and sandstone
+    minecraft:sand
+    minecraft:sand:1
+    minecraft:sandstone
+    minecraft:sandstone:1
+    minecraft:sandstone:2
+    minecraft:red_sandstone
+    minecraft:red_sandstone:1
+    minecraft:red_sandstone:2
+    # Gravel and clay
+    minecraft:gravel
+    minecraft:clay
+    # Terracotta (used as colored strata by the stone layers)
+    minecraft:hardened_clay
+    minecraft:stained_hardened_clay:0
+    minecraft:stained_hardened_clay:1
+    minecraft:stained_hardened_clay:2
+    minecraft:stained_hardened_clay:3
+    minecraft:stained_hardened_clay:4
+    minecraft:stained_hardened_clay:5
+    minecraft:stained_hardened_clay:6
+    minecraft:stained_hardened_clay:7
+    minecraft:stained_hardened_clay:8
+    minecraft:stained_hardened_clay:9
+    minecraft:stained_hardened_clay:10
+    minecraft:stained_hardened_clay:11
+    minecraft:stained_hardened_clay:12
+    minecraft:stained_hardened_clay:13
+    minecraft:stained_hardened_clay:14
+    minecraft:stained_hardened_clay:15
+    # Cold-region surface blocks
+    minecraft:snow
+    minecraft:ice
+    minecraft:packed_ice
+    # Underground decor blocks placed by other presets
+    minecraft:cobblestone
+    minecraft:mossy_cobblestone
+  ]
+}

@@ -1,0 +1,94 @@
+# ----------------------------------------------------------- #
+# ########################################################### #
+#               ### stone_layers.cave Info ###                #
+# ########################################################### #
+#   This preset is designed to demonstrate the use of the     #
+# included StoneLayer objects. Make sure to list these in     #
+# from bottom to top.                                         #
+# ----------------------------------------------------------- #
+# This file is for base rocks
+# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla
+# equivalents (red granite->granite, gneiss->andesite, limestone->diorite,
+# dolomite->light gray terracotta, green schist->green terracotta,
+# blue schist->cyan terracotta). Modded biomes removed.
+{
+  biomes: {
+    names: [
+      minecraft:plains
+      minecraft:extreme_hills
+      minecraft:extreme_hills_with_trees
+      minecraft:savanna
+      minecraft:savanna_rock
+      minecraft:mutated_savanna
+      minecraft:mutated_savanna_rock
+      minecraft:beaches
+      minecraft:mutated_plains
+      minecraft:forest
+      minecraft:forest_hills
+      minecraft:birch_forest
+      minecraft:birch_forest_hills
+      minecraft:roofed_forest
+      minecraft:mutated_extreme_hills
+      minecraft:mutated_forest
+      minecraft:mutated_birch_forest
+      minecraft:mutated_birch_forest_hills
+      minecraft:mutated_roofed_forest
+      minecraft:mutated_extreme_hills_with_trees
+    ]
+  }
+  layers: [
+    {
+      #red granite
+      state: minecraft:stone:1
+      height: [ 0, 16 ]
+      ceiling: {
+        frequency: 0.015
+        range: [ -7, 4 ]
+      }
+    }
+    {
+      #gneiss
+      state: minecraft:stone:5
+      height: [ 0, 52 ]
+      ceiling: {
+        frequency: 0.015
+      }
+    }
+    {
+      #limestone
+      state: minecraft:stone:3
+      height: [ 0, 100 ]
+      ceiling: {
+        frequency: 0.015
+        range: [ 0, 4 ]
+      }
+    }
+    {
+      #dolomite
+      state: minecraft:stained_hardened_clay:8
+      height: [ 0, 128 ]
+      ceiling: {
+        frequency: 0.015
+        range: [ 0, 8 ]
+      }
+    }
+    {
+      #green schist
+      state: minecraft:stained_hardened_clay:13
+      height: [ 0, 190 ]
+      ceiling: {
+        frequency: 0.3
+        range: [ 0, 8 ]
+      }
+    }
+    {
+      #blue schist
+      state: minecraft:stained_hardened_clay:9
+      height: [ 0, 255 ]
+      ceiling: {
+        frequency: 0.2
+        range: [ 0, 8 ]
+      }
+    }
+  ]
+}

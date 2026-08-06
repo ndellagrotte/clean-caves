@@ -1,0 +1,40 @@
+# Vanilla refactor: retargeted from the BiomeTweaker atacamian_desert biome to
+# vanilla Desert Hills (the cliffs created by 01_arid_cliffs.hjson);
+# contenttweaker salty crust -> coarse dirt, BOP loamy dirt -> dirt.
+# Port note: warp / warpAmplitude / warpFrequency do not exist in this mod's
+# noise settings; they were translated to perturb / perturbAmp / perturbFreq.
+{
+  biomes: {
+    names: [ "minecraft:desert_hills" ]
+    IDs: []
+    types: []
+  }
+  enabled: true
+  replaceableBlocks: [ "minecraft:dirt:1" ]
+  replaceDecorators: true
+  caverns: {
+    ceiling: {
+      frequency: 0.02
+      range: [ 2, 2 ]
+    }
+    floor: {
+      dummy: true
+    }
+    height: [ 64, 128 ]
+    generators: [
+      {
+        seed: 99
+        threshold: [ -0.2, 0.2 ]
+        frequency: 0.015
+        perturb: true
+        perturbAmp: 2
+        perturbFreq: 0.07
+        fractal: FBM
+        stretch: 2
+      }
+    ]
+  }
+  caveBlocks: [
+    { states: "minecraft:dirt", height: [ 0, 240 ] }
+  ]
+}

@@ -1,0 +1,83 @@
+# Vanilla refactor: rotn cave moss -> mossy cobblestone, mushroom lamp ->
+# glowstone, verribyne stalactites -> hanging oak leaves, green magicite ->
+# emerald ore. Modded biome names removed.
+{
+  imports: common_values.cave::NATURAL_STONE
+  replaceableBlocks: $NATURAL_STONE
+  replaceDecorators: true
+  dimensions: [ 0 ]
+  biomes: {
+    names: [
+      minecraft:forest
+      minecraft:forest_hills
+      minecraft:birch_forest
+      minecraft:birch_forest_hills
+      minecraft:roofed_forest
+      minecraft:redwood_taiga
+      minecraft:redwood_taiga_hills
+      minecraft:mutated_forest
+      minecraft:mutated_birch_forest
+      minecraft:mutated_birch_forest_hills
+      minecraft:mutated_roofed_forest
+    ]
+  }
+  caverns: {
+    height: [ 16, 58 ]
+    generators: {
+      frequency: 0.015
+      gain: 0.4
+      type: Cellular
+      returnType: Distance3Div
+      jitter: 0.75
+      perturb: true
+      perturbAmp: 10
+      perturbFreq: 0.025
+      invert: true
+      threshold: -0.4
+      stretch: 0.58
+    }
+  }
+  wallDecorators: [
+    # Moss walls and surfaces.
+    {
+      states: minecraft:mossy_cobblestone
+      matchers: $NATURAL_STONE
+      height: [ 11, 60 ]
+      directions: all
+      placement: EMBED
+      integrity: 0.7
+    }
+    # Lit mushroom lamps
+    {
+      states: minecraft:glowstone
+      height: [ 11, 55 ]
+      directions: down
+      matchers: minecraft:mossy_cobblestone
+      placement: overlay
+      integrity: 0.01
+    }
+  ]
+  stalactites: [
+    # verribynes.
+    {
+      type: stalactite
+      state: minecraft:leaves:0
+      size: medium
+      length: [ 1, 8 ]
+      height: [ 11, 58 ]
+      matchers: minecraft:mossy_cobblestone
+      chance: 0.9
+      region: {}
+    }
+    # Rare green magicite in the ceiling (what makes the underground be so populated).
+    {
+      type: stalactite
+      state: minecraft:emerald_ore
+      size: small
+      length: [ 1, 3 ]
+      height: [ 11, 48 ]
+      matchers: minecraft:mossy_cobblestone
+      chance: 0.03
+    }
+  ]
+}

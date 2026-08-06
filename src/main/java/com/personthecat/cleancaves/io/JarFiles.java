@@ -34,9 +34,6 @@ public final class JarFiles {
     /** The path where all of this mod's assets are stored. */
     private static final String ASSETS_PATH = "assets/" + Reference.MOD_ID;
 
-    /** The name of the folder containing cat presets. */
-    private static final String CAT_FOLDER_NAME = "cat";
-
     /** The name of the tutorial file. */
     private static final String TUTORIAL_NAME = "TUTORIAL.cave";
 
@@ -45,21 +42,24 @@ public final class JarFiles {
 
     /** All of the <b>example</b> presets to be copied from the jar. */
     private static final List<String> EXAMPLES = List.of(
-        "flooded_vanilla", "large_caves", "spirals",
-        "tunnels", "caverns", "stone_layers", "stalactites",
-        "ravines", "stone_clusters", "large_stalactites",
-        "vanilla", "underground_forest", "euclids_tunnels",
-        "lower_caves", "cluster_caverns"
-    );
-
-    private static final List<String> CAT_IMPORTS = List.of(
-        "common", "crack", "desert", "generic",
-        "jungle", "lava_aquifers", "maze",
-        "mountain", "mushroom", "snow", "water"
+        "flooded_vanilla.cave", "large_caves.cave", "spirals.cave",
+        "tunnels.cave", "caverns.cave", "stone_layers.cave", "stalactites.cave",
+        "ravines.cave", "stone_clusters.cave", "large_stalactites.cave",
+        "vanilla.cave", "underground_forest.cave", "euclids_tunnels.cave",
+        "lower_caves.cave", "cluster_caverns.cave"
     );
 
     private static final List<String> DEFAULTS = List.of(
-        "cat", "cat_lite", "geodes", "ore_veins"
+        "00_stone_layers_basaltic.cave", "00_stone_layers_cold.cave",
+        "00_stone_layers_desert.cave", "00_stone_layers_frozen.cave",
+        "00_stone_layers_generic.cave", "00_stone_layers_mesa.cave",
+        "00_stone_layers_mudstones.cave", "00_stone_layers_ocean.cave",
+        "00_stone_layers_stone_beach.cave", "00_stone_layers_volcanic.cave",
+        "01_arid_cliffs.hjson", "01_overgrown_cliffs.hjson",
+        "01_tropics_cliffs.hjson", "02_caverns.cave",
+        "04_bands_dirt_on_arid_tuff.cave", "04_moor_crevice.hjson",
+        "10_jungle_ravines.cave", "10_lush_caves.cave",
+        "10_rocky_dirt_entrances.cave", "10_stone_varnish.cave"
     );
 
     /** A couple of structure NBTs to be copied from the jar. */
@@ -72,7 +72,8 @@ public final class JarFiles {
 
     /** Any preset that specifically belongs in /imports. */
     private static final List<String> IMPORTS = List.of(
-        "blocks", "conditions", "defaults", "types"
+        "blocks.cave", "common_values.cave", "conditions.cave",
+        "defaults.cave", "sand_cave_values.cave", "types.cave"
     );
 
     private JarFiles() {}
@@ -88,7 +89,6 @@ public final class JarFiles {
         copyExamples();
         copyDefaults();
         copyImports();
-        copyCatImports();
         copyStructures();
         copyTutorial();
     }
@@ -107,8 +107,8 @@ public final class JarFiles {
     /** Examples are checked individually, so deleting one brings it back on the next launch. */
     private static void copyExamples() {
         for (final String fileName : EXAMPLES) {
-            copyIfAbsent(ASSETS_PATH + "/presets/" + fileName + ".cave",
-                CaveInit.exampleDir().resolve(fileName + ".cave"));
+            copyIfAbsent(ASSETS_PATH + "/examples/" + fileName,
+                CaveInit.exampleDir().resolve(fileName));
         }
     }
 
@@ -117,8 +117,8 @@ public final class JarFiles {
         final Path presetDir = CaveInit.presetDir();
         if (!fileExists(presetDir, "Error: Unable to read from preset directory")) {
             mkdirs(presetDir).expect("Error: Unable to create preset directory");
-            for (final String name : DEFAULTS) {
-                copyFile(ASSETS_PATH + "/presets/" + name + ".cave", presetDir.resolve(name + ".cave"));
+            for (final String fileName : DEFAULTS) {
+                copyFile(ASSETS_PATH + "/presets/" + fileName, presetDir.resolve(fileName));
             }
         }
     }
@@ -126,16 +126,8 @@ public final class JarFiles {
     private static void copyImports() {
         final Path importDir = CaveInit.importDir();
         ensureDirExists(importDir).expect("Error creating import directory");
-        for (final String name : IMPORTS) {
-            copyIfAbsent(ASSETS_PATH + "/imports/" + name + ".cave", importDir.resolve(name + ".cave"));
-        }
-    }
-
-    private static void copyCatImports() {
-        final Path catDir = CaveInit.importDir().resolve(CAT_FOLDER_NAME);
-        ensureDirExists(catDir).expect("Error creating cat directory");
-        for (final String name : CAT_IMPORTS) {
-            copyIfAbsent(ASSETS_PATH + "/imports/cat/" + name + ".cave", catDir.resolve(name + ".cave"));
+        for (final String fileName : IMPORTS) {
+            copyIfAbsent(ASSETS_PATH + "/imports/" + fileName, importDir.resolve(fileName));
         }
     }
 

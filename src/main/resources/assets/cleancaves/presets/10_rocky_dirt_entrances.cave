@@ -1,0 +1,27 @@
+# Vanilla refactor: contenttweaker rocky dirt -> coarse dirt (dirt:1), the
+# vanilla lookalike. UndergroundBiomes matchers -> vanilla NATURAL_STONE.
+{
+  imports: common_values.cave::NATURAL_STONE
+  biomes: {
+    names: [
+      minecraft:forest_hills
+      minecraft:birch_forest_hills
+      minecraft:redwood_taiga_hills
+      minecraft:mutated_forest
+      minecraft:mutated_birch_forest
+      minecraft:mutated_birch_forest_hills
+      minecraft:mutated_roofed_forest
+    ]
+  }
+  wallDecorators: [
+    # Transition between dirt and stone.
+    {
+      states: minecraft:dirt:1
+      directions: all
+      matchers: $NATURAL_STONE
+      height: [ 60, 255 ]
+      integrity: 0.65
+      placement: OVERLAY
+    }
+  ]
+}
