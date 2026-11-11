@@ -110,4 +110,31 @@ class SettingsBuilderTest {
         assertThat(parsed.jitterY()).isEqualTo(0.9F);
     }
 
+    @Test
+    @DisplayName("a region reads `invert`")
+    void regionReadsInvert() {
+        final JsonObject json = new JsonObject().add("invert", true).add("frequency", 0.25);
+        final NoiseRegionSettings s = NoiseRegionSettings.from(json);
+        assertThat(s.invert()).isTrue();
+        assertThat(s.frequency()).isEqualTo(0.25F);
+    }
+
+    @Test
+    @DisplayName("preset-level `blacklistDimensions` and `region` reach the conditions they name")
+    void overridesReadDimensionsBlacklistAndRegion() {
+        final JsonObject json = new JsonObject()
+                .add("blacklistDimensions", true)
+                .add("region", new JsonObject().add("frequency", 0.5));
+        final OverrideSettings overrides = OverrideSettings.from(json);
+        assertThat(overrides.blacklistDimensions()).contains(true);
+        assertThat(overrides.blacklistBiomes()).isEmpty();
+        assertThat(overrides.region()).isPresent();
+        assertThat(overrides.region().get().frequency()).isEqualTo(0.5F);
+
+        final ConditionSettings conditions = overrides.apply(ConditionSettings.builder()).build();
+        assertThat(conditions.blacklistDimensions()).isTrue();
+        assertThat(conditions.blacklistBiomes()).isFalse();
+        assertThat(conditions.region()).isPresent();
+    }
+
 }

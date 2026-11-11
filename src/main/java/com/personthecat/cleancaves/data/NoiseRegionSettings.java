@@ -45,6 +45,7 @@ public record NoiseRegionSettings(Optional<Integer> seed,
                 .mapInt(Keys.SEED, i -> builder.seed(Optional.of(i)))
                 .mapFloat(Keys.FREQUENCY, builder::frequency)
                 .mapFloatRange(Keys.THRESHOLD, builder::threshold)
+                .mapBool(Keys.INVERT, builder::invert)
                 .mapBool(Keys.CACHE, builder::cache)
                 .mapBool(Keys.DUMMY, builder::dummy)
                 .mapFloat(Keys.DUMMY_OUTPUT, builder::dummyOutput)

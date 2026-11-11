@@ -34,6 +34,9 @@ public final class PresetCombiner {
     public static void combine(String from, String to) {
         // Load all data.
         final int endOfName = from.indexOf('.');
+        if (endOfName < 0) {
+            throw runExF("Expected a preset name followed by a path, e.g. {}.tunnels[0]", from);
+        }
         final Path fileFrom = getRequiredPreset(from.substring(0, endOfName));
         final Path fileTo = getRequiredPreset(to);
         final JsonObject objFrom = getRequiredJson(fileFrom);
@@ -150,11 +153,11 @@ public final class PresetCombiner {
         }
         // We read an invalid character. Put it back.
         reader.unread(current);
-        final int parsed = Integer.parseInt(sb.toString());
-        if (parsed <= 0) {
-            throw runExF("Invalid index ({}) in path: {} <- Here", parsed, path);
+        try {
+            return Integer.parseInt(sb.toString());
+        } catch (final NumberFormatException e) {
+            throw runExF("Invalid index ({}) in path: {} <- Here", sb, path);
         }
-        return parsed;
     }
 
     private static void expect(PushbackReader reader, CharSequence path, char ch) throws IOException {

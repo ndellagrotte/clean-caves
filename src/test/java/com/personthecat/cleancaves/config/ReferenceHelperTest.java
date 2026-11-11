@@ -4,6 +4,7 @@ import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Optional;
 
@@ -68,6 +69,42 @@ class ReferenceHelperTest {
     void undeclaredVariableThrows() {
         final JsonObject definitions = new JsonObject();
         assertThatThrownBy(() -> ReferenceHelper.readValue(definitions, "NOPE")).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("arguments need no space after the comma")
+    void readsArgumentsWithoutSpaces() {
+        final JsonObject definitions = new JsonObject().add("ADD()", "[@1, @2]");
+        assertThat(substitute(definitions, "$ADD(1,2)").replace(" ", "")).isEqualTo("[1,2]");
+        assertThat(substitute(definitions, "$ADD(12,34)").replace(" ", "")).isEqualTo("[12,34]");
+    }
+
+    @Test
+    @DisplayName("quoted arguments are read whole, with or without a space between them")
+    void readsQuotedArguments() {
+        final JsonObject definitions = new JsonObject().add("PAIR()", "[@1, @2]");
+        assertThat(substitute(definitions, "$PAIR('12','34')").replace(" ", "")).isEqualTo("[12,34]");
+        assertThat(substitute(definitions, "$PAIR('12', '34')").replace(" ", "")).isEqualTo("[12,34]");
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @DisplayName("variables that refer to each other are reported instead of expanding forever")
+    void detectsCyclicalReferences() {
+        final JsonObject definitions = new JsonObject().add("A", "$B").add("B", "$A");
+        assertThatThrownBy(() -> ReferenceHelper.trySubstitute(definitions, "$A"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cyclical reference");
+    }
+
+    @Test
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @DisplayName("a variable that expands to more of itself is reported too")
+    void detectsGrowingReferences() {
+        final JsonObject definitions = new JsonObject().add("A", "$A x");
+        assertThatThrownBy(() -> ReferenceHelper.trySubstitute(definitions, "$A"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cyclical reference");
     }
 
 }

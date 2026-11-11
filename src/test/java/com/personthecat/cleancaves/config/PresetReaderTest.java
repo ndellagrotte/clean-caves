@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import net.minecraft.init.Bootstrap;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Covers what happens to a preset between the file and the expander: decoding, and the reordering
@@ -74,6 +77,28 @@ class PresetReaderTest {
 
         assertThat(json).isPresent();
         assertThat(json.get().get("enabled").asBoolean()).isFalse();
+    }
+
+    @Test
+    @DisplayName("with ignoreInvalidPresets, a preset that does not parse is skipped and the rest still load")
+    void skipsUnparsablePresetWhenAllowed(@TempDir Path dir) throws IOException {
+        Bootstrap.register();
+        final Path presets = Files.createDirectory(dir.resolve("presets"));
+        final Path imports = Files.createDirectory(dir.resolve("imports"));
+        Files.writeString(imports.resolve("defaults.cave"), "{}");
+        Files.writeString(presets.resolve("good.cave"), "enabled: false");
+        Files.writeString(presets.resolve("broken.cave"), "tunnels: [ {");
+
+        final boolean before = ConfigFile.ignoreInvalidPresets;
+        try {
+            ConfigFile.ignoreInvalidPresets = true;
+            assertThat(PresetReader.getPresets(presets, imports)).containsOnlyKeys("good");
+
+            ConfigFile.ignoreInvalidPresets = false;
+            assertThatThrownBy(() -> PresetReader.getPresets(presets, imports)).isInstanceOf(RuntimeException.class);
+        } finally {
+            ConfigFile.ignoreInvalidPresets = before;
+        }
     }
 
 }

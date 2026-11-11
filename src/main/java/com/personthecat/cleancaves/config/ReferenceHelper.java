@@ -6,8 +6,10 @@ import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -242,6 +244,9 @@ public final class ReferenceHelper {
         /** A pattern used for testing whether a string contains references. */
         static final Pattern REFERENCE_PATTERN = Pattern.compile("(?<!\\\\)\\$(?!\\d)(\\w+)");
 
+        /** How many references one value may expand through before it is taken to be a loop. */
+        static final int MAX_SUBSTITUTIONS = 4096;
+
         final int start;
         final int end;
         final String key;
@@ -268,12 +273,20 @@ public final class ReferenceHelper {
         static JsonValue replaceAll(JsonObject json, String val) {
             // Convert to and from JSON to allow in-place substitutions.
             String ret = val;
+            // Every intermediate string. Arriving at one of them again means the references form a
+            // loop -- A: $B, B: $A -- which would otherwise substitute forever.
+            final Set<String> seen = new HashSet<>();
+            seen.add(ret);
             do {
                 final Reference r = create(ret);
                 final String sub = Argument.generateValue(json, r);
                 final String updated = ret.substring(0, r.start) + sub + ret.substring(r.end);
                 if (ret.equals(updated)) {
                     throw runExF("Self reference: {}", sub);
+                }
+                // A reference that expands to more of itself never repeats exactly, so also cap the work.
+                if (!seen.add(updated) || seen.size() > MAX_SUBSTITUTIONS) {
+                    throw runExF("Cyclical reference: {}", val);
                 }
                 ret = updated;
             } while (containsReferences(ret));
@@ -332,9 +345,11 @@ public final class ReferenceHelper {
                             closing = read = findNext(val, i, ',', false);
                     }
                     args.add(val.substring(i, read));
+                    // Continue just past the separator. The next argument may start right there.
                     i = closing + 1;
+                } else {
+                    i++;
                 }
-                i++;
             }
         }
 

@@ -47,10 +47,10 @@ public final class PresetReader {
      * @throws ParseException if a preset contains a syntax error.
      */
     public static Map<String, CavePreset> getPresets(Path dir, Path imports) {
-        final Map<Path, JsonObject> jsons = loadJsons(dir);
-        final Map<Path, JsonObject> definitions = loadJsons(imports);
+        final Map<Path, JsonObject> jsons = loadJsons(dir, ConfigFile.ignoreInvalidPresets);
+        final Map<Path, JsonObject> definitions = loadJsons(imports, false);
         // Detect a few common syntax errors.
-        jsons.forEach(SyntaxHelper::check);
+        jsons.entrySet().removeIf(e -> !passesSyntaxCheck(e.getKey(), e.getValue()));
         definitions.forEach(SyntaxHelper::check);
         // Merges at the root must come before the values that override them.
         jsons.values().forEach(PresetReader::enforceValueOrder);
@@ -92,22 +92,56 @@ public final class PresetReader {
         json.addAll(bottom);
     }
 
-    /** Loads every JSON file in a directory, recursively. */
-    private static Map<Path, JsonObject> loadJsons(Path dir) {
+    /**
+     * Loads every JSON file in a directory, recursively.
+     *
+     * @param skipInvalid Whether a file that cannot be parsed is logged and left out, instead of
+     *                    stopping the load.
+     */
+    private static Map<Path, JsonObject> loadJsons(Path dir, boolean skipInvalid) {
         final Map<Path, JsonObject> jsons = new HashMap<>();
-        loadInto(jsons, dir);
+        loadInto(jsons, dir, skipInvalid);
         return jsons;
     }
 
-    private static void loadInto(Map<Path, JsonObject> jsons, Path dir) {
+    private static void loadInto(Map<Path, JsonObject> jsons, Path dir, boolean skipInvalid) {
         for (final Path file : listFiles(dir).orElse(List.of())) {
             if (Files.isDirectory(file)) {
-                loadInto(jsons, file);
+                loadInto(jsons, file, skipInvalid);
             } else if (CaveInit.validExtension(file)) {
                 log.info("Parsing preset file: {}", file.getFileName());
-                jsons.put(file, loadJson(file).asObject());
+                try {
+                    jsons.put(file, loadJson(file).asObject());
+                } catch (final RuntimeException e) {
+                    if (!skipInvalid) {
+                        throw e;
+                    }
+                    log.error("Skipping {}: {}", file.getFileName(), describe(e));
+                }
             }
         }
+    }
+
+    /** Runs the syntax check on a preset, which is skipped rather than fatal when the user allows it. */
+    private static boolean passesSyntaxCheck(Path file, JsonObject json) {
+        try {
+            SyntaxHelper.check(file, json);
+            return true;
+        } catch (final RuntimeException e) {
+            if (!ConfigFile.ignoreInvalidPresets) {
+                throw e;
+            }
+            log.error("Skipping {}: {}", file.getFileName(), describe(e));
+            return false;
+        }
+    }
+
+    /** The message of an error together with that of its cause, which is where a parser's detail sits. */
+    private static String describe(Throwable e) {
+        final Throwable cause = e.getCause();
+        return cause == null || cause.getMessage() == null
+                ? String.valueOf(e.getMessage())
+                : e.getMessage() + " (" + cause.getMessage() + ")";
     }
 
     /** Converts a map of (file -> json) to (filename -> POJO). */
@@ -130,7 +164,17 @@ public final class PresetReader {
 
     private static Map<String, JsonObject> extractInner(Map<Path, JsonObject> jsons) {
         final Map<String, JsonObject> extracted = new HashMap<>();
-        jsons.forEach((file, json) -> extractRecursive(extracted, noExtension(file), json));
+        final Map<String, Path> sources = new HashMap<>();
+        // Presets are known by file name alone, so two files can claim the same name. Going in path
+        // order keeps the survivor the same from one launch to the next.
+        jsons.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(e -> {
+            final String name = noExtension(e.getKey());
+            final Path previous = sources.put(name, e.getKey());
+            if (previous != null) {
+                log.warn("{} and {} are both named \"{}\". Only {} will be loaded.", previous, e.getKey(), name, e.getKey());
+            }
+            extractRecursive(extracted, name, e.getValue());
+        });
         return extracted;
     }
 

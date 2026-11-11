@@ -40,16 +40,20 @@ public final class ConfigFile {
             }) @RequiresMcRestart public static boolean otherGeneratorEnabled = false;
 
     @Comment({
-                    "When this field is set to true, PresetTester is allowed to",
-                    "crash the game when more serious errors are detected. Users",
-                    "who are more serious about creating cleaner and more efficient",
-                    "presets should consider enabling this field to make sure that", "nothing slips by."
+                    "When this field is set to true, PresetTester reports the",
+                    "problems it finds in a preset as warnings and errors instead",
+                    "of burying them at the info and debug levels. It never stops",
+                    "the game. Users who are more serious about creating cleaner",
+                    "and more efficient presets should consider enabling this field",
+                    "to make sure that nothing slips by."
             }) public static boolean strictPresets = false;
 
     @Comment({
                     "When this field is set to true, PresetReader will skip over",
-                    "any invalid presets and simply not load them. Make sure to",
-                    "check your log to determine if any preset erred."
+                    "any preset that cannot be parsed or read and simply not load",
+                    "it. Make sure to check your log to determine if any preset",
+                    "erred. Errors in the imports folder still stop the game,",
+                    "because every preset may depend on them."
             }) public static boolean ignoreInvalidPresets = false;
 
     @Comment({

@@ -337,7 +337,7 @@ public final class HjsonTools {
         return getScalableFloat(json, field, defaults).orElse(defaults);
     }
 
-    public static ScalableFloat toScalableFloat(int startVal, ScalableFloat defaults) {
+    public static ScalableFloat toScalableFloat(float startVal, ScalableFloat defaults) {
         return new ScalableFloat(startVal, defaults.startValRandFactor(), defaults.factor(), defaults.randFactor(),
                 defaults.exponent());
     }
@@ -368,7 +368,7 @@ public final class HjsonTools {
 
     /** Informs the user that they have entered an invalid biome ID. */
     public static RuntimeException noBiomeID(int id) {
-        return runExF("There is no biome with id \"%d.\"", id);
+        return runExF("There is no biome with id \"{}.\"", id);
     }
 
     /** Informs the user that they have entered an invalid block name. */
@@ -532,7 +532,7 @@ public final class HjsonTools {
         // resultant float.
         return getValue(json, field).map(v -> {
             if (v.isNumber()) {
-                return toScalableFloat(v.asInt(), defaults);
+                return toScalableFloat(v.asFloat(), defaults);
             } else if (v.isObject()) {
                 return toScalableFloat(v.asObject(), defaults);
             } else if (!v.isArray()) {

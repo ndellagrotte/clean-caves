@@ -139,7 +139,7 @@ public class PresetTester {
     }
 
     private void testRavines(List<RavineSettings> s) {
-        final String path = CavePreset.Keys.TUNNELS;
+        final String path = CavePreset.Keys.RAVINES;
         for (RavineSettings cfg : s) {
             this.testRavine(cfg, path);
             this.testConditions(cfg.conditions(), path);
@@ -214,7 +214,7 @@ public class PresetTester {
 
     private void testCluster(ClusterSettings s, String path) {
         final Range height = s.conditions().height();
-        if (!height.contains(s.centerHeight().min()) || height.contains(s.centerHeight().max())) {
+        if (s.centerHeight().min() < height.min() || s.centerHeight().max() > height.max()) {
             final String center = ClusterSettings.Keys.CENTER_HEIGHT;
             log.log(low, "Invalid heights @ {}. {} does not contain {}", path, height, center);
         }

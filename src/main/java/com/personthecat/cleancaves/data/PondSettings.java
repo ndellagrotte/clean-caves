@@ -19,7 +19,7 @@ public record PondSettings(List<IBlockState> states,
         Optional<NoiseSettings> noise) {
 
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = DecoratorSettings.Keys.WALL_DECORATORS;
+    private static final String FEATURE_NAME = DecoratorSettings.Keys.PONDS;
 
     /** The default noise values for ponds with noise. */
     public static final NoiseSettings DEFAULT_NOISE = NoiseSettings.builder()

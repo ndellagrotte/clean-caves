@@ -12,16 +12,29 @@ public final class Calculator {
     /** Determines whether a string contains numbers and operations. */
     private static final Pattern IS_EXP = Pattern.compile("[\\d.]*\\s*([-+/*()^]\\s*[\\d.]*\\s*)*");
 
+    /** A run of digits and dots that is not one number: two decimal points, or a point on its own. */
+    private static final Pattern MALFORMED_NUMBER = Pattern.compile("\\.\\d*\\.|(?<!\\d)\\.(?!\\d)");
+
+    /** Sits beneath an opening parenthesis on the operator stack when that group is to be negated. */
+    private static final char NEGATE = '~';
+
     private Calculator() { }
 
+    /**
+     * Whether a string is arithmetic that {@link #evaluate} can take. Text that merely consists of
+     * the right characters is not: an empty string has nothing to evaluate, and {@code 1.0.0} is a
+     * version, not a number.
+     */
     public static boolean isExpression(String exp) {
-        return IS_EXP.matcher(exp).matches();
+        return IS_EXP.matcher(exp).matches()
+                && exp.chars().anyMatch(Character::isDigit)
+                && !MALFORMED_NUMBER.matcher(exp).find();
     }
 
     public static double evaluate(String exp) {
         try {
             return evaluateInternal(exp);
-        } catch (EmptyStackException e) {
+        } catch (EmptyStackException | IllegalArgumentException e) {
             throw runExF("Invalid expression: {}", exp);
         }
     }
@@ -43,10 +56,14 @@ public final class Calculator {
             if (number) {
                 final StringBuilder buffer = new StringBuilder();
 
+                boolean decimal = false;
                 while (i < tokens.length && isNumeric(tokens[i])) {
                     final char c = tokens[i++];
-                    if (token == '.' && c == '.') {
-                        throw new IllegalArgumentException("Invalid decimal");
+                    if (c == '.') {
+                        if (decimal) {
+                            throw new IllegalArgumentException("Invalid decimal");
+                        }
+                        decimal = true;
                     }
                     buffer.append(c);
                 }
@@ -57,12 +74,21 @@ public final class Calculator {
                 if (lastIsNumber) {
                     ops.push('*');
                 }
+                // A pending sign applies to the whole group, not to the first number inside it.
+                if (sign < 0) {
+                    ops.push(NEGATE);
+                    sign = 1;
+                }
                 ops.push(token);
             } else if (token == ')') {
                 while (ops.peek() != '(') {
                     values.push(applyOp(ops.pop(), values.pop(), values.pop()));
                 }
                 ops.pop();
+                if (!ops.isEmpty() && ops.peek() == NEGATE) {
+                    ops.pop();
+                    values.push(-values.pop());
+                }
                 // A numeric value was extracted
                 number = true;
             } else if (isOperator(token)) {

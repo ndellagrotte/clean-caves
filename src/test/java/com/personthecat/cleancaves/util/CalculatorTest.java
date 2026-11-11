@@ -46,4 +46,32 @@ class CalculatorTest {
         assertThatThrownBy(() -> Calculator.evaluate("* 2")).isInstanceOf(RuntimeException.class);
     }
 
+    @ParameterizedTest
+    @CsvSource({ "'.5', 0.5", "'2 * .5', 1", "'.25 + .75', 1", "'5.', 5" })
+    @DisplayName("a number may start or end with its decimal point")
+    void evaluatesBareDecimalPoints(String expression, double expected) {
+        assertThat(Calculator.isExpression(expression)).isTrue();
+        assertThat(Calculator.evaluate(expression)).isCloseTo(expected, within(1e-9));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "'-(2 + 3)', -5", "'2 * -(3 + 1)', -8", "'-(-(4))', 4", "'10 - (2 + 3)', 5", "'-(2) + 7', 5" })
+    @DisplayName("a sign in front of a group negates the whole group")
+    void negatesGroups(String expression, double expected) {
+        assertThat(Calculator.evaluate(expression)).isCloseTo(expected, within(1e-9));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "   ", "1.0.0", "1..5", ".", "-", "()", "+ -" })
+    @DisplayName("text made of arithmetic characters but holding no valid number is left alone")
+    void isNotExpressionWithoutANumber(String value) {
+        assertThat(Calculator.isExpression(value)).isFalse();
+    }
+
+    @Test
+    @DisplayName("a number with two decimal points is malformed")
+    void rejectsDoubleDecimal() {
+        assertThatThrownBy(() -> Calculator.evaluate("1.5.2 + 1")).isInstanceOf(RuntimeException.class);
+    }
+
 }
