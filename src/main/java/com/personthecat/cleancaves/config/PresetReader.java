@@ -10,7 +10,6 @@ import org.hjson.JsonValue;
 import org.hjson.ParseException;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,7 +23,6 @@ import static com.personthecat.cleancaves.util.CommonMethods.extension;
 import static com.personthecat.cleancaves.util.CommonMethods.f;
 import static com.personthecat.cleancaves.util.CommonMethods.noExtension;
 import static com.personthecat.cleancaves.util.CommonMethods.runEx;
-import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
 /**
  * Drives everything that has to happen to raw JSON before a preset can become a concrete Java
@@ -54,6 +52,8 @@ public final class PresetReader {
         // Detect a few common syntax errors.
         jsons.forEach(SyntaxHelper::check);
         definitions.forEach(SyntaxHelper::check);
+        // Merges at the root must come before the values that override them.
+        jsons.values().forEach(PresetReader::enforceValueOrder);
         // Expand all of the variable definitions and imports.
         PresetExpander.expandAll(jsons, definitions);
         // Mark all values as unused so we can track them.
@@ -63,6 +63,33 @@ public final class PresetReader {
         // Check each preset and inform the user of potential mistakes.
         settings.forEach((name, cfg) -> new PresetTester(cfg, name, ConfigFile.strictPresets).run());
         return settings;
+    }
+
+    /**
+     * Moves {@code imports}, {@code variables} and every root-level {@code $MERGE} above the
+     * regular values, keeping the relative order within each group. A merge copies its keys in at
+     * its own position, replacing whatever is already there, so a preset that writes
+     * {@code tunnels: {...}} above {@code $VANILLA: ALL} would otherwise lose its own tunnels.
+     * This only reorders the object in memory; the file on disk is left as the user wrote it.
+     */
+    static void enforceValueOrder(JsonObject json) {
+        final JsonObject top = new JsonObject();
+        final JsonObject bottom = new JsonObject();
+        for (final String key : List.of(PresetExpander.IMPORTS, PresetExpander.VARIABLES)) {
+            if (json.has(key)) {
+                top.add(key, json.get(key));
+            }
+        }
+        for (final JsonObject.Member member : json) {
+            final String name = member.getName();
+            if (name.equals(PresetExpander.IMPORTS) || name.equals(PresetExpander.VARIABLES)) {
+                continue;
+            }
+            (name.startsWith("$") ? top : bottom).add(name, member.getValue());
+        }
+        json.clear();
+        json.addAll(top);
+        json.addAll(bottom);
     }
 
     /** Loads every JSON file in a directory, recursively. */
@@ -133,12 +160,20 @@ public final class PresetReader {
         }
     }
 
-    /** Parses the contents of the given file into a generic JsonValue. */
+    /**
+     * Parses the contents of the given file into a generic JsonValue. Bytes that are not valid
+     * UTF-8 decode to a replacement character instead of failing, so a preset saved in a legacy
+     * encoding still loads as long as the offending characters sit in comments or strings.
+     */
     private static JsonValue loadJson(Path file) {
-        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            return extension(file).equals("json") ? JsonObject.readJSON(reader) : JsonObject.readHjson(reader);
-        } catch (final IOException ignored) {
-            throw runExF("Unable to load preset file {}", file.getFileName());
+        final String text;
+        try {
+            text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        } catch (final IOException e) {
+            throw runEx(f("Unable to load preset file {}: {}", file.getFileName(), e), e);
+        }
+        try {
+            return extension(file).equals("json") ? JsonValue.readJSON(text) : JsonValue.readHjson(text);
         } catch (final ParseException e) {
             throw runEx(f("Error reading {}", file.getFileName()), e);
         }

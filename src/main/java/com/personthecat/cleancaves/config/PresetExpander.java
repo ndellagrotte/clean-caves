@@ -259,12 +259,7 @@ public final class PresetExpander {
      * @return defaults.cave, if present.
      */
     private static Optional<JsonObject> getDefaults(Map<Path, JsonObject> definitions) {
-        for (Map.Entry<Path, JsonObject> entry : definitions.entrySet()) {
-            if (entry.getKey().getFileName().toString().equals(DEFAULTS)) {
-                return Optional.of(entry.getValue());
-            }
-        }
-        return Optional.empty();
+        return ImportHelper.findDefinition(definitions, DEFAULTS);
     }
 
     /**

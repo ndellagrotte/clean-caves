@@ -92,6 +92,32 @@ public final class ImportHelper {
         return json.getNames();
     }
 
+    /**
+     * Finds the definition a file expression refers to. Several files can satisfy one expression --
+     * {@code common.cave} matches both {@code imports/common.cave} and {@code imports/cat/common.cave}
+     * -- so the shallowest match wins, which is the file sitting directly in the imports folder when
+     * there is one. Ties break on the full path so the result never depends on map iteration order.
+     */
+    static Optional<JsonObject> findDefinition(Map<Path, JsonObject> defs, String filename) {
+        return defs.entrySet()
+                .stream()
+                .filter(e -> matches(e.getKey(), filename))
+                .min(Comparator.comparingInt((Map.Entry<Path, JsonObject> e) -> e.getKey().getNameCount())
+                                .thenComparing(e -> e.getKey().toString()))
+                .map(Map.Entry::getValue);
+    }
+
+    /**
+     * Whether a file expression names this file. Users can be as specific as they like about the
+     * folders leading up to it, but the expression must cover whole path segments: {@code types.cave}
+     * does not match {@code all_types.cave}.
+     */
+    static boolean matches(Path file, String filename) {
+        final String path = file.toString().replace("\\", "/");
+        final String name = filename.replace("\\", "/").replaceFirst("^/+", "");
+        return path.equals(name) || path.endsWith("/" + name);
+    }
+
     private static void locateRecursively(Map<Path, JsonObject> definitions, String exp) {
         final Import helper = new Import(exp);
         final Path file = helper.locateFile()
@@ -152,20 +178,9 @@ public final class ImportHelper {
             as = splitAs.length > 1 ? Optional.of(splitAs[1]) : Optional.empty();
         }
 
-        /**
-         * Resolves this import against the already-loaded definitions. Several files can share a
-         * name -- {@code common.cave} and {@code cat/common.cave} both satisfy the expression
-         * {@code common.cave} -- so the shallowest match wins, which is the one sitting directly
-         * in the imports folder. Ties break on the full path so the result never depends on map
-         * iteration order.
-         */
+        /** Resolves this import against the already-loaded definitions. */
         Optional<JsonObject> loadObject(Map<Path, JsonObject> defs) {
-            return defs.entrySet()
-                    .stream()
-                    .filter(e -> this.matches(e.getKey()))
-                    .min(Comparator.comparingInt((Map.Entry<Path, JsonObject> e) -> e.getKey().getNameCount())
-                                    .thenComparing(e -> e.getKey().toString()))
-                    .map(Map.Entry::getValue);
+            return findDefinition(defs, this.filename);
         }
 
         Optional<JsonObject> tryLoadObject() {
@@ -181,8 +196,7 @@ public final class ImportHelper {
         }
 
         boolean matches(Path f) {
-            // Users can essentially be as specific as they like.
-            return f.toString().replace("\\", "/").endsWith(this.filename);
+            return ImportHelper.matches(f, this.filename);
         }
 
     }
