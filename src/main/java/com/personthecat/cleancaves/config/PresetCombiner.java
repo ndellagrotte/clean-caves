@@ -6,19 +6,24 @@ import org.apache.commons.lang3.CharUtils;
 import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 
-import java.nio.file.Path;
 import java.io.IOException;
 import java.io.PushbackReader;
 import java.io.StringReader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.personthecat.cleancaves.util.CommonMethods.*;
-import static com.personthecat.cleancaves.io.SafeFileIO.*;
-import static com.personthecat.cleancaves.util.HjsonTools.*;
+import static com.personthecat.cleancaves.io.SafeFileIO.backup;
+import static com.personthecat.cleancaves.util.CommonMethods.runEx;
+import static com.personthecat.cleancaves.util.CommonMethods.runExF;
+import static com.personthecat.cleancaves.util.HjsonTools.getLastContainer;
+import static com.personthecat.cleancaves.util.HjsonTools.setValueFromPath;
+import static com.personthecat.cleancaves.util.HjsonTools.writeJson;
 
 /** Used for merging JsonObject paths between json files. */
-public class PresetCombiner {
+public final class PresetCombiner {
+
+    private PresetCombiner() { }
 
     /**
      * Responsible for loading all necessary data for merging JsonObjects.
@@ -46,13 +51,12 @@ public class PresetCombiner {
     }
 
     private static Path getRequiredPreset(String path) {
-        return CaveInit.locatePreset(path)
-            .orElseThrow(() -> runExF("Unable to locate a preset named \"{}\"", path));
+        return CaveInit.locatePreset(path).orElseThrow(() -> runExF("Unable to locate a preset named \"{}\"", path));
     }
 
     private static JsonObject getRequiredJson(Path file) {
         return PresetReader.getPresetJson(file)
-            .orElseThrow(() -> runExF("{} does not contain a valid json or hjson object.", file.getFileName()));
+                .orElseThrow(() -> runExF("{} does not contain a valid json or hjson object.", file.getFileName()));
     }
 
     /**
@@ -158,4 +162,5 @@ public class PresetCombiner {
             throw runExF("Expected {} in path: {} <- Here", ch, path);
         }
     }
+
 }

@@ -3,42 +3,32 @@ package com.personthecat.cleancaves.data;
 import com.personthecat.cleancaves.config.CavePreset;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.HjsonMapper;
+import org.hjson.JsonObject;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockStairs;
 import net.minecraft.block.state.IBlockState;
-import org.hjson.JsonObject;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
 /** Giant pillars with optional corner blocks made from stairs. */
 @ParametersAreNonnullByDefault
-public record PillarSettings(
-    ConditionSettings conditions,
-    IBlockState state,
-    int count,
-    Range length,
-    Optional<BlockStairs> stairBlock
-) {
+public record PillarSettings(ConditionSettings conditions,
+        IBlockState state,
+        int count,
+        Range length,
+        Optional<BlockStairs> stairBlock) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.pillars;
+    private static final String FEATURE_NAME = CavePreset.Keys.PILLARS;
 
     /** Default spawn conditions for all pillar generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(10, 50)).build();
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String state = "state";
-        public static final String count = "count";
-        public static final String length = "length";
-        public static final String stairBlock = "stairBlock";
-
-        private Keys() {}
-    }
+            .height(Range.of(10, 50))
+            .build();
 
     public static Builder builder() {
         return new Builder();
@@ -56,12 +46,12 @@ public record PillarSettings(
     private static PillarSettings copyInto(JsonObject json, Builder builder) {
         final ConditionSettings inherited = builder.conditions;
         return new HjsonMapper(json)
-            .mapRequiredState(Keys.state, FEATURE_NAME, builder::state)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inherited)))
-            .mapInt(Keys.count, builder::count)
-            .mapRange(Keys.length, builder::length)
-            .mapState(Keys.stairBlock, s -> builder.stairBlock(Optional.of(toStairBlock(s))))
-            .release(builder::build);
+                .mapRequiredState(Keys.STATE, FEATURE_NAME, builder::state)
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inherited)))
+                .mapInt(Keys.COUNT, builder::count)
+                .mapRange(Keys.LENGTH, builder::length)
+                .mapState(Keys.STAIR_BLOCK, s -> builder.stairBlock(Optional.of(toStairBlock(s))))
+                .release(builder::build);
     }
 
     private static BlockStairs toStairBlock(IBlockState state) {
@@ -72,7 +62,21 @@ public record PillarSettings(
         throw runExF("Error: the input block, {}, is not a valid stair block.", block);
     }
 
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String STATE = "state";
+        public static final String COUNT = "count";
+        public static final String LENGTH = "length";
+        public static final String STAIR_BLOCK = "stairBlock";
+
+        private Keys() { }
+
+    }
+
     public static final class Builder {
+
         ConditionSettings conditions = DEFAULT_CONDITIONS;
         /** Required -- {@code mapRequiredState} throws if the preset omits it. */
         private IBlockState state;
@@ -80,7 +84,7 @@ public record PillarSettings(
         private Range length = Range.of(5, 12);
         private Optional<BlockStairs> stairBlock = Optional.empty();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -108,8 +112,9 @@ public record PillarSettings(
         }
 
         public PillarSettings build() {
-            return new PillarSettings(this.conditions, this.state, this.count, this.length,
-                this.stairBlock);
+            return new PillarSettings(this.conditions, this.state, this.count, this.length, this.stairBlock);
         }
+
     }
+
 }

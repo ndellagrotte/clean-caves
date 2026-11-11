@@ -3,8 +3,10 @@ package com.personthecat.cleancaves.model;
 import com.personthecat.cleancaves.data.PondSettings;
 import com.personthecat.cleancaves.noise.DummyGenerator;
 import fastnoise.FastNoise;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.world.World;
+
 import java.util.Random;
 
 public class ConfiguredPond {
@@ -22,8 +24,18 @@ public class ConfiguredPond {
     }
 
     public boolean canGenerate(Random rand, int x, int y, int z, int chunkX, int chunkZ) {
-        return y >= cfg.height().min() && y <= cfg.height().max()// Height bounds
-            && testNoise(x, y, z, chunkX, chunkZ); // Noise
+        return y >= cfg.height().min()
+                && y <= cfg.height().max() // Height bounds
+                && testNoise(x, y, z, chunkX, chunkZ); // Noise
+    }
+
+    public boolean matchesBlock(IBlockState state) {
+        for (IBlockState matcher : cfg.matchers()) {
+            if (matcher.equals(state)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -41,12 +53,4 @@ public class ConfiguredPond {
         return noise.GetBoolean(x, y, z);
     }
 
-    public boolean matchesBlock(IBlockState state) {
-        for (IBlockState matcher : cfg.matchers()) {
-            if (matcher.equals(state)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

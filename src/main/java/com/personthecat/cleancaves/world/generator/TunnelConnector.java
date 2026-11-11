@@ -3,26 +3,29 @@ package com.personthecat.cleancaves.world.generator;
 import com.personthecat.cleancaves.data.TunnelSettings;
 import com.personthecat.cleancaves.model.PrimerData;
 import com.personthecat.cleancaves.util.XoRoShiRo;
+
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 import java.util.Random;
 
-public class TunnelConnector<Socket extends TunnelSocket> extends TunnelGenerator {
+public class TunnelConnector<S extends TunnelSocket> extends TunnelGenerator {
 
-    private final Socket parent;
+    private final S parent;
 
-    public TunnelConnector(TunnelSettings tunnelCfg, Socket parent, World world) {
+    public TunnelConnector(TunnelSettings tunnelCfg, S parent, World world) {
         super(tunnelCfg, world);
         this.parent = parent;
     }
 
     @Override
     protected void mapGenerate(MapGenerationContext ctx) {
-        this.bury(ctx.heightmap, ctx.world, ctx.rand.nextLong(), ctx.destChunkX, ctx.destChunkZ, ctx.chunkX, ctx.chunkZ, ctx.primer);
+        this.bury(ctx.heightmap, ctx.world, ctx.rand.nextLong(), ctx.destChunkX, ctx.destChunkZ, ctx.chunkX, ctx.chunkZ,
+                ctx.primer);
     }
 
-    protected void bury(int[][] heightmap, World world, long seed, int destX, int destZ, int x, int z, ChunkPrimer primer) {
+    protected void bury(int[][] heightmap, World world, long seed, int destX, int destZ, int x, int z,
+            ChunkPrimer primer) {
         final Random rand = new XoRoShiRo(seed);
         final int frequency = this.getTunnelCount(rand);
         for (int i = 0; i < frequency; i++) {
@@ -35,9 +38,10 @@ public class TunnelConnector<Socket extends TunnelSocket> extends TunnelGenerato
 
                 if (y != TunnelSocket.CANNOT_SPAWN) {
                     path.setY(y);
-                    this.addTunnel(world, rand.nextLong(), data, path,0, distance);
+                    this.addTunnel(world, rand.nextLong(), data, path, 0, distance);
                 }
             }
         }
     }
+
 }

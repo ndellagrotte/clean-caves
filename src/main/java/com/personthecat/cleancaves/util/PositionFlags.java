@@ -38,7 +38,6 @@ public class PositionFlags {
         }
     }
 
-
     /**
      * Appends a new block position into the data.
      *
@@ -105,4 +104,5 @@ public class PositionFlags {
     public void reset() {
         this.index = 0;
     }
+
 }

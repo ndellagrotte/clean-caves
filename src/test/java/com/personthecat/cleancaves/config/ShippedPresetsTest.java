@@ -19,9 +19,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
  * Parses the presets that ship inside the jar. Nothing here touches Minecraft, so a broken preset
@@ -43,18 +42,20 @@ class ShippedPresetsTest {
 
     @BeforeAll
     static void assetsArePresent() {
-        assertTrue(Files.isDirectory(PRESETS), PRESETS + " is missing. Run the tests from the project root.");
-        assertTrue(Files.isDirectory(EXAMPLES), EXAMPLES + " is missing");
-        assertTrue(Files.isDirectory(IMPORTS), IMPORTS + " is missing");
+        assertThat(Files.isDirectory(PRESETS))
+                .as(PRESETS + " is missing. Run the tests from the project root.")
+                .isTrue();
+        assertThat(Files.isDirectory(EXAMPLES)).as(EXAMPLES + " is missing").isTrue();
+        assertThat(Files.isDirectory(IMPORTS)).as(IMPORTS + " is missing").isTrue();
     }
 
     private static Map<Path, JsonObject> load(Path dir) {
         final Map<Path, JsonObject> jsons = new LinkedHashMap<>();
-        try (final Stream<Path> files = Files.walk(dir)) {
+        try (Stream<Path> files = Files.walk(dir)) {
             files.filter(Files::isRegularFile)
-                .filter(f -> EXTENSIONS.stream().anyMatch(f.getFileName().toString()::endsWith))
-                .sorted()
-                .forEach(f -> jsons.put(f, parse(f)));
+                    .filter(f -> EXTENSIONS.stream().anyMatch(f.getFileName().toString()::endsWith))
+                    .sorted()
+                    .forEach(f -> jsons.put(f, parse(f)));
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -92,8 +93,10 @@ class ShippedPresetsTest {
         jsons.putAll(load(EXAMPLES));
         jsons.putAll(load(IMPORTS));
 
-        assertEquals(41, jsons.size(), "expected 20 presets, 15 examples and 6 imports");
-        jsons.forEach((file, json) -> assertDoesNotThrow(() -> SyntaxHelper.check(file, json), file.toString()));
+        assertThat(jsons.size()).as("expected 20 presets, 15 examples and 6 imports").isEqualTo(41);
+        jsons.forEach((file, json) -> assertThatCode(() -> SyntaxHelper.check(file, json))
+                .as(file.toString())
+                .doesNotThrowAnyException());
     }
 
     @Test
@@ -103,10 +106,11 @@ class ShippedPresetsTest {
         presets.putAll(load(EXAMPLES));
         final Map<Path, JsonObject> definitions = load(IMPORTS);
 
-        assertDoesNotThrow(() -> PresetExpander.expandAll(presets, definitions));
+        assertThatCode(() -> PresetExpander.expandAll(presets, definitions)).doesNotThrowAnyException();
 
         final List<String> unresolved = new ArrayList<>();
         presets.forEach((file, json) -> findReferences(file.getFileName().toString(), json, unresolved));
-        assertTrue(unresolved.isEmpty(), "unresolved references: " + unresolved);
+        assertThat(unresolved.isEmpty()).as("unresolved references: " + unresolved).isTrue();
     }
+
 }

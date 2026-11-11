@@ -2,6 +2,7 @@ package com.personthecat.cleancaves.world.feature;
 
 import com.personthecat.cleancaves.data.PillarSettings;
 import com.personthecat.cleancaves.model.Range;
+
 import net.minecraft.block.BlockStairs;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
@@ -10,8 +11,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Random;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static net.minecraft.block.BlockStairs.EnumHalf;
 import static net.minecraft.block.BlockStairs.EnumShape;
@@ -56,11 +57,15 @@ public class PillarGenerator extends FeatureGenerator {
         final int actualMax = pos.getY();
         final int actualMin = getLowestBlock(world, pos);
         // Verify that the position is possible.
-        if (actualMin < 0) return;
+        if (actualMin < 0) {
+            return;
+        }
 
         int length = actualMax - actualMin;
         // Ensure that the difference is within the specified bounds.
-        if (length < cfg.length().min() || length > cfg.length().max()) return;
+        if (length < cfg.length().min() || length > cfg.length().max()) {
+            return;
+        }
 
         for (int y = actualMax; y >= actualMin; y--) {
             BlockPos current = new BlockPos(pos.getX(), y, pos.getZ());
@@ -110,10 +115,11 @@ public class PillarGenerator extends FeatureGenerator {
      * Randomly looks +-3 blocks vertically surrounding the given X, Z
      * coordinates. Places stairs given a ~1/3 chance.
      */
-    private void testPlaceDown(BlockStairs stairs, BlockPos pos, EnumFacing facing, Random rand, World world, EnumHalf topOrBottom) {
+    private void testPlaceDown(BlockStairs stairs, BlockPos pos, EnumFacing facing, Random rand, World world,
+            EnumHalf topOrBottom) {
         BlockPos previous = pos.down(4);
         // Iterate 3 blocks down, 3 blocks up.
-        for (int i = - 3; i <= 3; i++) {
+        for (int i = -3; i <= 3; i++) {
             final BlockPos current = pos.up(i);
             // Verify that we're within the height bounds. Stop randomly.
             if (current.getY() >= cfg.conditions().height().min() && rand.nextInt(2) == 0) {
@@ -128,9 +134,10 @@ public class PillarGenerator extends FeatureGenerator {
         }
     }
 
-    private void testPlaceUp(BlockStairs stairs, BlockPos pos, EnumFacing facing, Random rand, World world, EnumHalf topOrBottom) {
+    private void testPlaceUp(BlockStairs stairs, BlockPos pos, EnumFacing facing, Random rand, World world,
+            EnumHalf topOrBottom) {
         BlockPos previous = pos.up(4);
-        for (int i =  3; i >= - 3; i--) {
+        for (int i = 3; i >= -3; i--) {
             final BlockPos current = pos.up(i);
             if (current.getY() >= cfg.conditions().height().min() && rand.nextInt(2) == 0) {
                 // pos.up will add or subtract and is thus still valid.
@@ -150,8 +157,9 @@ public class PillarGenerator extends FeatureGenerator {
     private IBlockState getStairRotation(BlockStairs stairs, EnumFacing facing, EnumHalf topOrBottom) {
         // The null check is handled above.
         return stairs.getDefaultState()
-            .withProperty(BlockStairs.FACING, facing)
-            .withProperty(BlockStairs.HALF, topOrBottom)
-            .withProperty(BlockStairs.SHAPE, EnumShape.STRAIGHT);
+                .withProperty(BlockStairs.FACING, facing)
+                .withProperty(BlockStairs.HALF, topOrBottom)
+                .withProperty(BlockStairs.SHAPE, EnumShape.STRAIGHT);
     }
+
 }

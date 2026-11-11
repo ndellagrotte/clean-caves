@@ -7,9 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /** {@link Range} is inclusive-minimum, exclusive-maximum, and has a distinct empty case. */
 class RangeTest {
@@ -18,18 +16,18 @@ class RangeTest {
     @DisplayName("of() sorts its bounds")
     void sortsBounds() {
         final Range range = Range.of(9, 3);
-        assertEquals(3, range.min());
-        assertEquals(9, range.max());
+        assertThat(range.min()).isEqualTo(3);
+        assertThat(range.max()).isEqualTo(9);
     }
 
     @Test
     @DisplayName("contains is inclusive of min and exclusive of max")
     void containsIsHalfOpen() {
         final Range range = Range.of(3, 6);
-        assertTrue(range.contains(3));
-        assertTrue(range.contains(5));
-        assertFalse(range.contains(6));
-        assertFalse(range.contains(2));
+        assertThat(range.contains(3)).isTrue();
+        assertThat(range.contains(5)).isTrue();
+        assertThat(range.contains(6)).isFalse();
+        assertThat(range.contains(2)).isFalse();
     }
 
     @Test
@@ -37,26 +35,26 @@ class RangeTest {
     void iteratesHalfOpen() {
         final List<Integer> seen = new ArrayList<>();
         Range.of(2, 5).forEach(seen::add);
-        assertEquals(List.of(2, 3, 4), seen);
+        assertThat(seen).isEqualTo(List.of(2, 3, 4));
     }
 
     @Test
     @DisplayName("checkedOrEmpty produces the empty range when the span is not usable")
     void checkedOrEmpty() {
-        assertTrue(Range.checkedOrEmpty(5, 5).isEmpty());
-        assertTrue(Range.checkedOrEmpty(9, 3).isEmpty());
-        assertFalse(Range.checkedOrEmpty(3, 9).isEmpty());
+        assertThat(Range.checkedOrEmpty(5, 5).isEmpty()).isTrue();
+        assertThat(Range.checkedOrEmpty(9, 3).isEmpty()).isTrue();
+        assertThat(Range.checkedOrEmpty(3, 9).isEmpty()).isFalse();
     }
 
     @Test
     @DisplayName("the empty range yields nothing and contains nothing")
     void emptyRangeBehaviour() {
         final Range empty = Range.empty();
-        assertTrue(empty.isEmpty());
-        assertEquals(0, empty.diff());
-        assertEquals(0, empty.rand(new Random(1)));
-        assertFalse(empty.contains(0));
-        assertFalse(empty.iterator().hasNext());
+        assertThat(empty.isEmpty()).isTrue();
+        assertThat(empty.diff()).isEqualTo(0);
+        assertThat(empty.rand(new Random(1))).isEqualTo(0);
+        assertThat(empty.contains(0)).isFalse();
+        assertThat(empty.iterator().hasNext()).isFalse();
     }
 
     @Test
@@ -66,7 +64,7 @@ class RangeTest {
         final Random rand = new Random(12345L);
         for (int i = 0; i < 200; i++) {
             final int value = range.rand(rand);
-            assertTrue(value >= 4 && value <= 8, "out of bounds: " + value);
+            assertThat(value >= 4 && value <= 8).as("out of bounds: " + value).isTrue();
         }
     }
 
@@ -74,8 +72,9 @@ class RangeTest {
     @DisplayName("a single-value range covers exactly that value")
     void singleValueRange() {
         final Range range = Range.of(7);
-        assertEquals(7, range.min());
-        assertEquals(7, range.max());
-        assertEquals(7, range.rand(new Random(1)));
+        assertThat(range.min()).isEqualTo(7);
+        assertThat(range.max()).isEqualTo(7);
+        assertThat(range.rand(new Random(1))).isEqualTo(7);
     }
+
 }

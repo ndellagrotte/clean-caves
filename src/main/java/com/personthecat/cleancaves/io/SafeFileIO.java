@@ -3,7 +3,6 @@ package com.personthecat.cleancaves.io;
 import com.personthecat.cleancaves.CaveInit;
 import com.personthecat.cleancaves.util.Result;
 
-import javax.annotation.CheckReturnValue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -18,6 +17,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.annotation.CheckReturnValue;
 
 import static com.personthecat.cleancaves.util.CommonMethods.runEx;
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
@@ -28,7 +28,7 @@ import static com.personthecat.cleancaves.util.CommonMethods.runExF;
  */
 public final class SafeFileIO {
 
-    private SafeFileIO() {}
+    private SafeFileIO() { }
 
     /** Ensures that the input path refers to a directory, creating one if nothing is found. */
     @CheckReturnValue
@@ -116,7 +116,7 @@ public final class SafeFileIO {
         if (!Files.isDirectory(dir)) {
             return Optional.empty();
         }
-        try (final Stream<Path> contents = Files.list(dir)) {
+        try (Stream<Path> contents = Files.list(dir)) {
             return Optional.of(contents.filter(filter).sorted().toList());
         } catch (final IOException | UncheckedIOException ignored) {
             return Optional.empty();
@@ -157,8 +157,8 @@ public final class SafeFileIO {
 
     /** Retrieves an asset from the jar file, failing loudly when it is absent. */
     public static InputStream getRequiredResource(String path) {
-        return getResource(path)
-            .orElseThrow(() -> runExF("The required file \"{}\" was not present in the jar.", path));
+        return getResource(path).orElseThrow(() -> runExF("The required file \"{}\" was not present in the jar.",
+                path));
     }
 
     /**
@@ -166,6 +166,7 @@ public final class SafeFileIO {
      * {@code name.cave -> name (1).cave -> name (2).cave}, stopping at the first gap.
      */
     private static final class BackupHelper {
+
         private final String base;
         private final String ext;
         private final Pattern pattern;
@@ -183,8 +184,7 @@ public final class SafeFileIO {
         }
 
         void cycle(Path backupDir) {
-            final List<Path> matching =
-                new ArrayList<>(listFiles(backupDir, this::matches).orElse(List.of()));
+            final List<Path> matching = new ArrayList<>(listFiles(backupDir, this::matches).orElse(List.of()));
             matching.sort(Comparator.comparingInt(this::getNumber));
             final int end = this.getFirstGap(matching);
             for (int i = end - 1; i >= 0; i--) {
@@ -223,5 +223,7 @@ public final class SafeFileIO {
             }
             return files.size();
         }
+
     }
+
 }

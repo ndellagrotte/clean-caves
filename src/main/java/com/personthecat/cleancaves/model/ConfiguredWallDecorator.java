@@ -3,6 +3,7 @@ package com.personthecat.cleancaves.model;
 import com.personthecat.cleancaves.data.WallDecoratorSettings;
 import com.personthecat.cleancaves.noise.DummyGenerator;
 import fastnoise.FastNoise;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
@@ -24,8 +25,28 @@ public class ConfiguredWallDecorator {
     }
 
     public boolean canGenerate(Random rand, int x, int y, int z, int chunkX, int chunkZ) {
-        return y >= cfg.height().min() && y <= cfg.height().max()// Height bounds
-            && testNoise(x, y, z, chunkX, chunkZ); // Noise
+        return y >= cfg.height().min()
+                && y <= cfg.height().max() // Height bounds
+                && testNoise(x, y, z, chunkX, chunkZ); // Noise
+    }
+
+    public boolean matchesBlock(IBlockState state) {
+        for (IBlockState matcher : cfg.matchers()) {
+            if (matcher.equals(state)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean decidePlace(IBlockState state, ChunkPrimer primer, int originX, int originY, int originZ, int destX,
+            int destY, int destZ) {
+        if (WallDecoratorSettings.Placement.OVERLAY.equals(cfg.placement())) {
+            primer.setBlockState(originX, originY, originZ, state);
+            return true;
+        }
+        primer.setBlockState(destX, destY, destZ, state);
+        return false;
     }
 
     /**
@@ -41,24 +62,6 @@ public class ConfiguredWallDecorator {
     /** Variant of testNoise() that uses absolute coordinates. */
     private boolean testNoise(int x, int y, int z) {
         return noise.GetBoolean(x, y, z);
-    }
-
-    public boolean matchesBlock(IBlockState state) {
-        for (IBlockState matcher : cfg.matchers()) {
-            if (matcher.equals(state)){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean decidePlace(IBlockState state, ChunkPrimer primer, int xO, int yO, int zO, int xD, int yD, int zD) {
-        if (WallDecoratorSettings.Placement.OVERLAY.equals(cfg.placement())) {
-            primer.setBlockState(xO, yO, zO, state);
-            return true;
-        }
-        primer.setBlockState(xD, yD, zD, state);
-        return false;
     }
 
 }

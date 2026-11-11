@@ -2,6 +2,7 @@ package com.personthecat.cleancaves.data;
 
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import fastnoise.FastNoise;
+
 import net.minecraft.world.World;
 
 import java.util.Optional;
@@ -13,7 +14,7 @@ import java.util.Random;
  */
 final class NoiseSeeds {
 
-    private NoiseSeeds() {}
+    private NoiseSeeds() { }
 
     /**
      * Generates a new seed from the configured base value, so that the same base produces the same
@@ -26,4 +27,5 @@ final class NoiseSeeds {
             return Float.floatToIntBits(simple.GetNoise(num));
         }).orElseGet(world.rand::nextInt);
     }
+
 }

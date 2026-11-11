@@ -2,6 +2,7 @@ package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.data.ConditionSettings;
 import com.personthecat.cleancaves.model.Conditions;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -26,10 +27,6 @@ public abstract class BasicGenerator {
         this.world = new WeakReference<>(world);
     }
 
-    protected final World getWorld() {
-        return Objects.requireNonNull(world.get(), "World reference has been culled.");
-    }
-
     public void generate(PrimerContext ctx) {
         final int dim = ctx.world.provider.getDimension();
         if (conditions.dimensions.test(dim)) {
@@ -38,6 +35,10 @@ public abstract class BasicGenerator {
                 generateChecked(ctx);
             }
         }
+    }
+
+    protected final World getWorld() {
+        return Objects.requireNonNull(world.get(), "World reference has been culled.");
     }
 
     protected abstract void generateChecked(PrimerContext ctx);

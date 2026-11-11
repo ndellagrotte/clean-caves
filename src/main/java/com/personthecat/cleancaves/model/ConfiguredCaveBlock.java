@@ -3,6 +3,7 @@ package com.personthecat.cleancaves.model;
 import com.personthecat.cleancaves.data.CaveBlockSettings;
 import com.personthecat.cleancaves.noise.DummyGenerator;
 import fastnoise.FastNoise;
+
 import net.minecraft.world.World;
 
 public class ConfiguredCaveBlock {

@@ -1,8 +1,8 @@
 package com.personthecat.cleancaves.util;
 
-import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 /**
  * An "error or nothing" box, used so that IO operations can report failure without throwing.
@@ -91,4 +91,5 @@ public record Result<E extends Throwable>(@Nullable E error) {
     public Optional<String> getMessage() {
         return this.error == null ? Optional.empty() : Optional.ofNullable(this.error.getMessage());
     }
+
 }

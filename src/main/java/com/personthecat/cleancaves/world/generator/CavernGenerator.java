@@ -9,6 +9,7 @@ import com.personthecat.cleancaves.noise.DummyGenerator;
 import com.personthecat.cleancaves.util.PositionFlags;
 import com.personthecat.cleancaves.world.BiomeSearch;
 import fastnoise.FastNoise;
+
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
 
@@ -19,6 +20,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class CavernGenerator extends WorldCarver implements TunnelSocket {
+
+    protected final CavernSettings cfg;
 
     private final List<ChunkTestData> invalidChunks;
     private final double[] wallNoise = new double[256];
@@ -31,7 +34,6 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
     private final int maxY;
     private final int diffY;
     private final int curveOffset;
-    protected final CavernSettings cfg;
 
     public CavernGenerator(CavernSettings cfg, World world) {
         super(cfg.conditions(), cfg.decorators(), world);
@@ -61,18 +63,46 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         return settings.stream().map(s -> s.getGenerator(world)).collect(Collectors.toList());
     }
 
-    private void setupWallNoise(NoiseMapSettings settings, World world) {
-        final FastNoise noise = settings.getGenerator(world);
-        final int len = wallNoise.length;
-        final double increment = 6.2830810546 / (double) len;
-        final int r = 32; //  Arbitrary radius and resolution
-
-        // Wrap the noise around a circle so it can be translated seamlessly.
+    private static void interpolate(boolean[][] f) {
+        final int len = f.length;
         for (int i = 0; i < len; i++) {
-            final double angle = (i + 1) * increment;
-            final int x = (int) (r * Math.cos(angle));
-            final int y = (int) (r * Math.sin(angle));
-            this.wallNoise[i] = noise.GetAdjustedNoise(x, y);
+            for (int j = 0; j < len; j++) {
+                if (f[i][j]) {
+                    continue;
+                }
+                // Determine if this is a corner point.
+                if (i % 2 == 1 && j % 2 == 1) {
+                    final boolean nw = f[i - 1][j - 1];
+                    final boolean se = f[i + 1][j + 1];
+                    final boolean ne = f[i - 1][j + 1];
+                    final boolean sw = f[i + 1][j - 1];
+                    f[i][j] = (nw && se) || (ne && sw);
+                } else {
+                    final boolean n = i > 0 && f[i - 1][j];
+                    final boolean s = i < len - 1 && f[i + 1][j];
+                    final boolean e = j > 0 && f[i][j - 1];
+                    final boolean w = j < len - 1 && f[i][j + 1];
+                    f[i][j] = (n && s) || (e && w);
+                }
+            }
+        }
+    }
+
+    private static void createBorder(List<ChunkTestData> border, boolean[][] f, FastNoise noise, int r, int x, int z) {
+        final int len = f.length;
+        for (int i = 0; i < len; i++) {
+            for (int j = 0; j < len; j++) {
+                if (!f[i][j]) {
+                    continue;
+                }
+                // Convert to absolute coordinates
+                final double cx = (i / 2.0) - r + x;
+                final double cz = (j / 2.0) - r + z;
+                final int absX = ((int) cx * 16 + 8) + (cx % 1 == 0 ? 8 : 0);
+                final int absZ = ((int) cz * 16 + 8) + (cz % 1 == 0 ? 8 : 0);
+                final int translateY = (int) noise.GetAdjustedNoise(absX, absZ);
+                border.add(new ChunkTestData(absX, absZ, translateY));
+            }
         }
     }
 
@@ -98,6 +128,58 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         }
     }
 
+    @Override
+    public int getTunnelHeight(int[][] heightmap, Random rand, int x, int z, int chunkX, int chunkZ) {
+        // Currently ignores offset and general noise
+        final Range height = this.conditions.getColumn(x, z);
+        if (height.isEmpty()) {
+            return CANNOT_SPAWN;
+        }
+        final int center = height.rand(rand);
+        final int offY = (int) this.heightOffset.GetAdjustedNoise(x, z);
+        if (rand.nextBoolean()) {
+            for (int y = center; y < height.max(); y += this.cfg.resolution()) {
+                if (this.checkSingle(x, y + offY, z)) {
+                    return y;
+                }
+            }
+        } else {
+            for (int y = center; y > height.min(); y -= this.cfg.resolution()) {
+                if (this.checkSingle(x, y + offY, z)) {
+                    return y;
+                }
+            }
+        }
+        return CANNOT_SPAWN;
+    }
+
+    @Override
+    protected void generateChecked(PrimerContext ctx) {
+        this.generateCaverns(ctx.heightmap, ctx.localRand, ctx.world, ctx.primer, ctx.chunkX, ctx.chunkZ);
+    }
+
+    @Override
+    protected void generateShell(Random rand, ChunkPrimer primer, int x, int y, int z, int cy, int chunkX, int chunkZ) {
+        if (this.hasShell()) {
+            super.generateShell(rand, primer, x, y, z, cy, chunkX, chunkZ);
+        }
+    }
+
+    private void setupWallNoise(NoiseMapSettings settings, World world) {
+        final FastNoise noise = settings.getGenerator(world);
+        final int len = wallNoise.length;
+        final double increment = 6.2830810546 / (double) len;
+        final int r = 32; //  Arbitrary radius and resolution
+
+        // Wrap the noise around a circle so it can be translated seamlessly.
+        for (int i = 0; i < len; i++) {
+            final double angle = (i + 1) * increment;
+            final int x = (int) (r * Math.cos(angle));
+            final int y = (int) (r * Math.sin(angle));
+            this.wallNoise[i] = noise.GetAdjustedNoise(x, y);
+        }
+    }
+
     private void fillInvalidChunks(BiomeSearch biomes, int x, int z) {
         if (this.wallInterpolated) {
             this.fillInterpolated(biomes, x, z);
@@ -108,7 +190,8 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
 
     private void fillBorder(BiomeSearch biomes) {
         for (BiomeSearch.Data d : biomes.surrounding.get()) {
-            if (!(this.conditions.biomes.test(d.biome()) && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
+            if (!(this.conditions.biomes.test(d.biome())
+                    && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
                 // Translate the noise randomly for each chunk to minimize repetition.
                 final int translateY = (int) wallOffset.GetAdjustedNoise(d.centerX(), d.centerZ());
                 this.invalidChunks.add(new ChunkTestData(d.centerX(), d.centerZ(), translateY));
@@ -130,7 +213,8 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         final boolean[][] points = new boolean[interpolated][interpolated];
 
         for (BiomeSearch.Data d : biomes.surrounding.get()) {
-            if (!(this.conditions.biomes.test(d.biome()) && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
+            if (!(this.conditions.biomes.test(d.biome())
+                    && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
                 final int relX = d.chunkX() - x;
                 final int relZ = d.chunkZ() - z;
                 points[(relX + r) * 2][(relZ + r) * 2] = true;
@@ -139,51 +223,12 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         return points;
     }
 
-    private static void interpolate(boolean[][] f) {
-        final int len = f.length;
-        for (int i = 0; i < len; i++) {
-            for (int j = 0; j < len; j++) {
-                if (f[i][j]) continue;
-                // Determine if this is a corner point.
-                if (i % 2 == 1 && j % 2 == 1) {
-                    final boolean nw = f[i - 1][j - 1];
-                    final boolean se = f[i + 1][j + 1];
-                    final boolean ne = f[i - 1][j + 1];
-                    final boolean sw = f[i + 1][j - 1];
-                    f[i][j] = (nw && se) || (ne && sw);
-                } else {
-                    final boolean n = i > 0 && f[i - 1][j];
-                    final boolean s = i < len - 1 && f[i + 1][j];
-                    final boolean e = j > 0 && f[i][j - 1];
-                    final boolean w = j < len - 1 && f[i][j + 1];
-                    f[i][j] = (n && s) || (e && w);
-                }
-            }
-        }
-    }
-
-    private static void createBorder(List<ChunkTestData> border, boolean[][] f, FastNoise noise, int r, int x, int z) {
-        final int len = f.length;
-        for (int i = 0; i < len; i++) {
-            for (int j = 0; j < len; j++) {
-                if (!f[i][j]) continue;
-                // Convert to absolute coordinates
-                final double cX = (i / 2.0) - r + x;
-                final double cZ = (j / 2.0) - r + z;
-                final int aX = ((int) cX * 16 + 8) + (cX % 1 == 0 ? 8 : 0);
-                final int aZ = ((int) cZ * 16 + 8) + (cZ % 1 == 0 ? 8 : 0);
-                final int translateY = (int) noise.GetAdjustedNoise(aX, aZ);
-                border.add(new ChunkTestData(aX, aZ, translateY));
-            }
-        }
-    }
-
     private void fillInvalidChunks(int chunkX, int chunkZ) {
         final int range = ConfigFile.biomeRange;
-        for (int cX = chunkX - range; cX <= chunkX + range; cX++) {
-            for (int cZ = chunkZ - range; cZ < chunkZ + range; cZ++) {
-                final int centerX = cX * 16 + 8;
-                final int centerZ = cZ * 16 + 8;
+        for (int cx = chunkX - range; cx <= chunkX + range; cx++) {
+            for (int cz = chunkZ - range; cz < chunkZ + range; cz++) {
+                final int centerX = cx * 16 + 8;
+                final int centerZ = cz * 16 + 8;
                 if (!this.conditions.region.GetBoolean(centerX, centerZ)) {
                     final int translateY = (int) wallOffset.GetAdjustedNoise(centerX, centerZ);
                     this.invalidChunks.add(new ChunkTestData(centerX, centerZ, translateY));
@@ -192,13 +237,9 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         }
     }
 
-    @Override
-    protected void generateChecked(PrimerContext ctx) {
-        this.generateCaverns(ctx.heightmap, ctx.localRand, ctx.world, ctx.primer, ctx.chunkX, ctx.chunkZ);
-    }
-
     /** Generates giant air pockets in this chunk using a series of 3D noise generators. */
-    private void generateCaverns(int[][] heightmap, Random rand, World world, ChunkPrimer primer, int chunkX, int chunkZ) {
+    private void generateCaverns(int[][] heightmap, Random rand, World world, ChunkPrimer primer, int chunkX,
+            int chunkZ) {
         for (int x = 0; x < 16; x++) {
             final int actualX = x + (chunkX * 16);
             for (int z = 0; z < 16; z++) {
@@ -210,7 +251,8 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         this.decorateAll(this.caverns, rand, world, primer, chunkX, chunkZ);
     }
 
-    private void generateColumn(int[][] heightmap, Random rand, ChunkPrimer primer, int x, int z, int chunkX, int chunkZ, int actualX, int actualZ) {
+    private void generateColumn(int[][] heightmap, Random rand, ChunkPrimer primer, int x, int z, int chunkX,
+            int chunkZ, int actualX, int actualZ) {
         final BorderData border = this.getNearestBorder(actualX, actualZ);
         final double distance = border.distance;
         final int offset = border.offset;
@@ -219,15 +261,15 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         final int d = (int) this.decorators.shell.radius;
         final int min = Math.max(1, height.min() - d);
         final int max = Math.min(255, height.max() + d);
-        final int yO = (int) this.heightOffset.GetAdjustedNoise(actualX, actualZ);
+        final int offY = (int) this.heightOffset.GetAdjustedNoise(actualX, actualZ);
         for (int y = min; y < max; y++) {
-            if (this.conditions.noise.GetBoolean(actualX, y + yO, actualZ)) {
+            if (this.conditions.noise.GetBoolean(actualX, y + offY, actualZ)) {
                 final double relY = this.curveOffset + this.maxY - y;
                 final double curve = distance - ((relY * relY) / this.diffY * this.wallCurveRatio);
 
                 final double wall = this.wallNoise[(y + offset) & 255];
                 if (curve > wall) {
-                    this.place(rand, primer, height, x, y, z, yO, chunkX, chunkZ, actualX, actualZ);
+                    this.place(rand, primer, height, x, y, z, offY, chunkX, chunkZ, actualX, actualZ);
                 } else if (curve > wall - d) {
                     this.generateShell(rand, primer, x, y, z, y, chunkX, chunkZ);
                 }
@@ -235,9 +277,10 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         }
     }
 
-    private void place(Random rand, ChunkPrimer primer, Range height, int x, int y, int z, int yO, int chunkX, int chunkZ, int actualX, int actualZ) {
+    private void place(Random rand, ChunkPrimer primer, Range height, int x, int y, int z, int offY, int chunkX,
+            int chunkZ, int actualX, int actualZ) {
         for (FastNoise noise : this.generators) {
-            final float value = noise.GetNoise(actualX, y + yO, actualZ);
+            final float value = noise.GetNoise(actualX, y + offY, actualZ);
             if (noise.IsInThreshold(value)) {
                 if (height.contains(y)) {
                     this.replaceBlock(rand, primer, x, y, z, chunkX, chunkZ);
@@ -272,38 +315,6 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         this.caverns.forEach((x, y, z) -> this.decorateBlock(rand, primer, x, y, z, chunkX, chunkZ));
     }
 
-    @Override
-    protected void generateShell(Random rand, ChunkPrimer primer, int x, int y, int z, int cY, int chunkX, int chunkZ) {
-        if (this.hasShell()) {
-            super.generateShell(rand, primer, x, y, z, cY, chunkX, chunkZ);
-        }
-    }
-
-    @Override
-    public int getTunnelHeight(int[][] heightmap, Random rand, int x, int z, int chunkX, int chunkZ) {
-        // Currently ignores offset and general noise
-        final Range height = this.conditions.getColumn(x, z);
-        if (height.isEmpty()) {
-            return CANNOT_SPAWN;
-        }
-        final int center = height.rand(rand);
-        final int yO = (int) this.heightOffset.GetAdjustedNoise(x, z);
-        if (rand.nextBoolean()) {
-            for (int y = center; y < height.max(); y += this.cfg.resolution()) {
-                if (this.checkSingle(x, y + yO, z)) {
-                    return y;
-                }
-            }
-        } else {
-            for (int y = center; y > height.min(); y -= this.cfg.resolution()) {
-                if (this.checkSingle(x, y + yO, z)) {
-                    return y;
-                }
-            }
-        }
-        return CANNOT_SPAWN;
-    }
-
     private boolean checkSingle(int actualX, int y, int actualZ) {
         if (!this.conditions.noise.GetBoolean(actualX, y, actualZ)) {
             return false;
@@ -316,7 +327,8 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         return false;
     }
 
-    private record ChunkTestData(int x, int z, int offset) {}
+    private record ChunkTestData(int x, int z, int offset) { }
 
-    private record BorderData(double distance, int offset) {}
+    private record BorderData(double distance, int offset) { }
+
 }

@@ -1,10 +1,10 @@
 package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.data.LayerSettings;
+
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-
 
 public class LayerGenerator extends BasicGenerator {
 
@@ -42,4 +42,5 @@ public class LayerGenerator extends BasicGenerator {
             }
         }
     }
+
 }

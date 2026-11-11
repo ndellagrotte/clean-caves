@@ -7,10 +7,12 @@ import java.util.regex.Pattern;
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
 /** An expression evaluator used for generating numeric field data in presets. */
-public class Calculator {
+public final class Calculator {
 
     /** Determines whether a string contains numbers and operations. */
     private static final Pattern IS_EXP = Pattern.compile("[\\d.]*\\s*([-+/*()^]\\s*[\\d.]*\\s*)*");
+
+    private Calculator() { }
 
     public static boolean isExpression(String exp) {
         return IS_EXP.matcher(exp).matches();
@@ -33,13 +35,15 @@ public class Calculator {
 
         for (int i = 0; i < tokens.length; i++) {
             final char token = tokens[i];
-            if (token == ' ') continue;
+            if (token == ' ') {
+                continue;
+            }
             boolean number = isNumeric(token);
 
             if (number) {
                 final StringBuilder buffer = new StringBuilder();
 
-                while(i < tokens.length && isNumeric(tokens[i])) {
+                while (i < tokens.length && isNumeric(tokens[i])) {
                     final char c = tokens[i++];
                     if (token == '.' && c == '.') {
                         throw new IllegalArgumentException("Invalid decimal");
@@ -103,14 +107,26 @@ public class Calculator {
 
     private static double applyOp(char op, double b, double a) {
         switch (op) {
-            case '+': return a + b;
-            case '-': return a - b;
-            case '^': return Math.pow(a, b);
-            case '*': return a * b;
-            case '/':
-                if (b == 0.0) throw new UnsupportedOperationException("Divide by zero");
+            case '+' -> {
+                return a + b;
+            }
+            case '-' -> {
+                return a - b;
+            }
+            case '^' -> {
+                return Math.pow(a, b);
+            }
+            case '*' -> {
+                return a * b;
+            }
+            case '/' -> {
+                if (b == 0.0) {
+                    throw new UnsupportedOperationException("Divide by zero");
+                }
                 return a / b;
-            default: throw new UnsupportedOperationException("operator: " + op);
+            }
+            default -> throw new UnsupportedOperationException("operator: " + op);
         }
     }
+
 }

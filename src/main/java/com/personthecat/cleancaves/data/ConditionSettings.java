@@ -2,45 +2,26 @@ package com.personthecat.cleancaves.data;
 
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.HjsonMapper;
-import net.minecraft.world.biome.Biome;
 import org.hjson.JsonObject;
+
+import net.minecraft.world.biome.Biome;
 
 import java.util.List;
 import java.util.Optional;
 
 /** Everything that decides whether a feature may spawn at a given place. */
-public record ConditionSettings(
-    boolean blacklistBiomes,
-    List<Biome> biomes,
-    boolean blacklistDimensions,
-    List<Integer> dimensions,
-    Range height,
-    Optional<NoiseMapSettings> floor,
-    Optional<NoiseMapSettings> ceiling,
-    Optional<NoiseRegionSettings> region,
-    Optional<NoiseSettings> noise
-) {
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String blacklistBiomes = "blacklistBiomes";
-        public static final String biomes = "biomes";
-        public static final String blacklistDimensions = "blacklistDimensions";
-        public static final String dimensions = "dimensions";
-        public static final String height = "height";
-        public static final String floor = "floor";
-        public static final String ceiling = "ceiling";
-        public static final String region = "region";
-        public static final String noise = "noise";
-
-        private Keys() {}
-    }
+public record ConditionSettings(boolean blacklistBiomes,
+        List<Biome> biomes,
+        boolean blacklistDimensions,
+        List<Integer> dimensions,
+        Range height,
+        Optional<NoiseMapSettings> floor,
+        Optional<NoiseMapSettings> ceiling,
+        Optional<NoiseRegionSettings> region,
+        Optional<NoiseSettings> noise) {
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    public Builder toBuilder() {
-        return new Builder(this);
     }
 
     public static ConditionSettings from(JsonObject json, ConditionSettings defaults) {
@@ -58,27 +39,53 @@ public record ConditionSettings(
      */
     private static ConditionSettings copyInto(JsonObject json, Builder builder) {
         return new HjsonMapper(json)
-            .mapBool(Keys.blacklistBiomes, builder::blacklistBiomes)
-            .mapBiomes(Keys.biomes, builder::biomes)
-            .mapBool(Keys.blacklistDimensions, builder::blacklistDimensions)
-            .mapIntList(Keys.dimensions, builder::dimensions)
-            .mapRange(Keys.height, builder::height)
-            .mapObject(Keys.floor, o -> builder.floor(Optional.of(builder.floor
-                .map(cfg -> NoiseMapSettings.from(o, cfg))
-                .orElseGet(() -> NoiseMapSettings.from(o)))))
-            .mapObject(Keys.ceiling, o -> builder.ceiling(Optional.of(builder.ceiling
-                .map(cfg -> NoiseMapSettings.from(o, cfg))
-                .orElseGet(() -> NoiseMapSettings.from(o)))))
-            .mapObject(Keys.region, o -> builder.region(Optional.of(builder.region
-                .map(cfg -> NoiseRegionSettings.from(o, cfg))
-                .orElseGet(() -> NoiseRegionSettings.from(o)))))
-            .mapObject(Keys.noise, o -> builder.noise(Optional.of(builder.noise
-                .map(cfg -> NoiseSettings.from(o, cfg))
-                .orElseGet(() -> NoiseSettings.from(o)))))
-            .release(builder::build);
+                .mapBool(Keys.BLACKLIST_BIOMES, builder::blacklistBiomes)
+                .mapBiomes(Keys.BIOMES, builder::biomes)
+                .mapBool(Keys.BLACKLIST_DIMENSIONS, builder::blacklistDimensions)
+                .mapIntList(Keys.DIMENSIONS, builder::dimensions)
+                .mapRange(Keys.HEIGHT, builder::height)
+                .mapObject(Keys.FLOOR,
+                        o -> builder.floor(Optional.of(builder.floor
+                                        .map(cfg -> NoiseMapSettings.from(o, cfg))
+                                        .orElseGet(() -> NoiseMapSettings.from(o)))))
+                .mapObject(Keys.CEILING,
+                        o -> builder.ceiling(Optional.of(builder.ceiling
+                                        .map(cfg -> NoiseMapSettings.from(o, cfg))
+                                        .orElseGet(() -> NoiseMapSettings.from(o)))))
+                .mapObject(Keys.REGION,
+                        o -> builder.region(Optional.of(builder.region
+                                        .map(cfg -> NoiseRegionSettings.from(o, cfg))
+                                        .orElseGet(() -> NoiseRegionSettings.from(o)))))
+                .mapObject(Keys.NOISE,
+                        o -> builder.noise(Optional.of(builder.noise
+                                        .map(cfg -> NoiseSettings.from(o, cfg))
+                                        .orElseGet(() -> NoiseSettings.from(o)))))
+                .release(builder::build);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String BLACKLIST_BIOMES = "blacklistBiomes";
+        public static final String BIOMES = "biomes";
+        public static final String BLACKLIST_DIMENSIONS = "blacklistDimensions";
+        public static final String DIMENSIONS = "dimensions";
+        public static final String HEIGHT = "height";
+        public static final String FLOOR = "floor";
+        public static final String CEILING = "ceiling";
+        public static final String REGION = "region";
+        public static final String NOISE = "noise";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private boolean blacklistBiomes = false;
         private List<Biome> biomes = List.of();
         private boolean blacklistDimensions = false;
@@ -89,7 +96,7 @@ public record ConditionSettings(
         Optional<NoiseRegionSettings> region = Optional.empty();
         Optional<NoiseSettings> noise = Optional.empty();
 
-        private Builder() {}
+        private Builder() { }
 
         private Builder(ConditionSettings source) {
             this.blacklistBiomes = source.blacklistBiomes;
@@ -149,9 +156,10 @@ public record ConditionSettings(
         }
 
         public ConditionSettings build() {
-            return new ConditionSettings(this.blacklistBiomes, this.biomes,
-                this.blacklistDimensions, this.dimensions, this.height, this.floor, this.ceiling,
-                this.region, this.noise);
+            return new ConditionSettings(this.blacklistBiomes, this.biomes, this.blacklistDimensions, this.dimensions,
+                    this.height, this.floor, this.ceiling, this.region, this.noise);
         }
+
     }
+
 }

@@ -1,6 +1,7 @@
 package com.personthecat.cleancaves.model;
 
 import com.personthecat.cleancaves.data.WallDecoratorSettings;
+
 import net.minecraft.world.World;
 
 import java.util.ArrayList;
@@ -10,17 +11,16 @@ import java.util.List;
  * Wall decorators bucketed by the direction they apply to, so the carver can look up only the
  * decorators relevant to the face it is currently decorating.
  */
-public record WallDecoratorMap(
-    List<ConfiguredWallDecorator> all,
-    List<ConfiguredWallDecorator> side,
-    List<ConfiguredWallDecorator> up,
-    List<ConfiguredWallDecorator> down,
-    List<ConfiguredWallDecorator> north,
-    List<ConfiguredWallDecorator> south,
-    List<ConfiguredWallDecorator> east,
-    List<ConfiguredWallDecorator> west,
-    boolean containsAny
-) {
+public record WallDecoratorMap(List<ConfiguredWallDecorator> all,
+        List<ConfiguredWallDecorator> side,
+        List<ConfiguredWallDecorator> up,
+        List<ConfiguredWallDecorator> down,
+        List<ConfiguredWallDecorator> north,
+        List<ConfiguredWallDecorator> south,
+        List<ConfiguredWallDecorator> east,
+        List<ConfiguredWallDecorator> west,
+        boolean containsAny) {
+
     public static Builder builder() {
         return new Builder();
     }
@@ -39,6 +39,7 @@ public record WallDecoratorMap(
                     case SOUTH -> builder.south(wall);
                     case EAST -> builder.east(wall);
                     case WEST -> builder.west(wall);
+                    default -> throw new IllegalStateException("Unhandled direction: " + d);
                 }
             }
         }
@@ -47,6 +48,7 @@ public record WallDecoratorMap(
 
     /** Each direction setter appends, mirroring the singular-adder style it replaces. */
     public static final class Builder {
+
         private final List<ConfiguredWallDecorator> all = new ArrayList<>();
         private final List<ConfiguredWallDecorator> side = new ArrayList<>();
         private final List<ConfiguredWallDecorator> up = new ArrayList<>();
@@ -55,9 +57,10 @@ public record WallDecoratorMap(
         private final List<ConfiguredWallDecorator> south = new ArrayList<>();
         private final List<ConfiguredWallDecorator> east = new ArrayList<>();
         private final List<ConfiguredWallDecorator> west = new ArrayList<>();
+
         private boolean containsAny = false;
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder all(ConfiguredWallDecorator decorator) {
             this.all.add(decorator);
@@ -105,10 +108,11 @@ public record WallDecoratorMap(
         }
 
         public WallDecoratorMap build() {
-            return new WallDecoratorMap(List.copyOf(this.all), List.copyOf(this.side),
-                List.copyOf(this.up), List.copyOf(this.down), List.copyOf(this.north),
-                List.copyOf(this.south), List.copyOf(this.east), List.copyOf(this.west),
-                this.containsAny);
+            return new WallDecoratorMap(List.copyOf(this.all), List.copyOf(this.side), List.copyOf(this.up),
+                    List.copyOf(this.down), List.copyOf(this.north), List.copyOf(this.south), List.copyOf(this.east),
+                    List.copyOf(this.west), this.containsAny);
         }
+
     }
+
 }

@@ -11,19 +11,21 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.personthecat.cleancaves.util.CommonMethods.*;
+import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
-public class ReferenceHelper {
+public final class ReferenceHelper {
 
     /** An equivalent formatter used for parsing functions without comments. */
     public static final HjsonOptions FORMATTER = new HjsonOptions()
-        .setParseLegacyRoot(false)
-        .setOutputComments(false)
-        .setAllowCondense(true)
-        .setAllowMultiVal(true)
-        .setCommentSpace(0)
-        .setSpace(2)
-        .setBracesSameLine(true);
+            .setParseLegacyRoot(false)
+            .setOutputComments(false)
+            .setAllowCondense(true)
+            .setAllowMultiVal(true)
+            .setCommentSpace(0)
+            .setSpace(2)
+            .setBracesSameLine(true);
+
+    private ReferenceHelper() { }
 
     /**
      * If <code>val</code> contains references, the values will be copied out of <code>from</code>.
@@ -58,7 +60,185 @@ public class ReferenceHelper {
         throw runExF("Use of undeclared variable: {}", ref);
     }
 
+    /**
+     * Finds the first question mark (optional indicator) after the given index.
+     *
+     * @param val A raw string which may or may not contain parentheses.
+     * @param index The first index to check for a parenthesis.
+     * @return The index of the parenthesis, or else -1.
+     */
+    private static int findQuestion(String val, int index) {
+        return findSpecialCharacter(val, index, '?');
+    }
+
+    /**
+     * Finds the first opening parenthesis after the given index.
+     *
+     * @param val A raw string which may or may not contain parentheses.
+     * @param index The first index to check for a parenthesis.
+     * @return The index of the parenthesis, or else -1.
+     */
+    private static int findOpening(String val, int index) {
+        return findSpecialCharacter(val, index, '(');
+    }
+
+    /**
+     * Finds the first occurrence of the given character, ignoring whitespace. This
+     * function will return -1 given another alphanumeric character comes first.
+     *
+     * @param val A raw string which may or may not contain parentheses.
+     * @param index The first index to check for a parenthesis.
+     * @param f The character to search for.
+     * @return The index of the parenthesis, or else -1.
+     */
+    private static int findSpecialCharacter(String val, int index, char f) {
+        for (int i = index; i < val.length(); i++) {
+            final char c = val.charAt(i);
+            if (c == f) {
+                return i;
+            }
+            if (Character.isLetterOrDigit(c)) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Finds a balanced closing parenthesis matching the one at the current position.
+     * This function does support escaped, quoted, and nested parentheses.
+     *
+     * @throws IllegalStateException if a balanced closer is not found.
+     * @param val The raw string which is expected to contain a closer.
+     * @param opening The index of the opening parenthesis.
+     * @param open The character to be balanced with.
+     * @param close The character being searched for.
+     * @return The index of the closing parenthesis.
+     */
+    private static int findClosing(String val, int opening, char open, char close) {
+        int numP = 0;
+        boolean dq = false;
+        boolean sq = false;
+        boolean esc = false;
+        for (int i = opening; i < val.length(); i++) {
+            if (esc) {
+                esc = false;
+                continue;
+            }
+            final char c = val.charAt(i);
+            if (c == '\\') {
+                esc = true;
+            } else if (c == '"') {
+                dq = !dq;
+            } else if (c == '\'') {
+                sq = !sq;
+            } else if (c == open) {
+                if (!dq && !sq) {
+                    numP++;
+                }
+            } else if (c == close) {
+                if (!dq && !sq && --numP == 0) {
+                    return i;
+                }
+            }
+        }
+        throw new IllegalStateException("Missing " + close + " in function");
+    }
+
+    /**
+     * Finds the next possible instance of this character, ignoring escaped characters.
+     *
+     * @param val The raw string being searched through.
+     * @param index The starting index to search from.
+     * @param f The exact character to find.
+     * @param required Whether to throw an exception if the character is missing.
+     * @return The index of this character, or else end of string.
+     */
+    private static int findNext(String val, int index, char f, boolean required) {
+        boolean esc = false;
+        int i = index;
+        while (i < val.length()) {
+            if (esc) {
+                esc = false;
+                i++;
+                continue;
+            }
+            final char c = val.charAt(i);
+            if (c == '\\') {
+                esc = true;
+            } else if (c == f) {
+                return i;
+            }
+
+            if (f == '\"' || f == '\'') {
+                i++;
+                continue;
+            }
+            if (c == '(') {
+                i = findClosing(val, i, '(', ')');
+            } else if (c == '[') {
+                i = findClosing(val, i, '[', ']');
+            } else if (c == '{') {
+                i = findClosing(val, i, '{', '}');
+            } else {
+                i++;
+            }
+        }
+        if (required) {
+            throw new IllegalStateException("Missing " + f + " in function");
+        }
+        return val.length();
+    }
+
+    /**
+     * Determines whether the input text is string data and should be quoted.
+     * If it is, returns the text in quotes.
+     *
+     * @param s The raw parameter value input to the template
+     * @return The quoted text, else the original text.
+     */
+    private static String quote(String s) {
+        final char first = s.charAt(0);
+        final char last = s.charAt(s.length() - 1);
+        if (Character.isWhitespace(first)) {
+            final boolean single = containsRawDoubleQuote(s);
+            // Only possible if the input was already quoted.
+            return single ? '\'' + s + '\'' : '"' + s + '"';
+        } else if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
+            return s;
+        }
+        for (char c : s.toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                final boolean single = containsRawDoubleQuote(s);
+                return single ? '\'' + s + '\'' : '"' + s + '"';
+            }
+        }
+        return s;
+    }
+
+    /**
+     * Determines whether the input text contains raw double quotes (") with
+     * no escape characters.
+     *
+     * @param s The raw parameter value input to the template
+     * @return Whether an unescaped double quote is found.
+     */
+    private static boolean containsRawDoubleQuote(String s) {
+        boolean escaped = false;
+        for (char c : s.toCharArray()) {
+            if (c == '\\') {
+                escaped = true;
+            } else if (c == '"' && !escaped) {
+                return true;
+            } else {
+                escaped = false;
+            }
+        }
+        return false;
+    }
+
     private static class Reference {
+
         /** A pattern used for testing whether a string contains references. */
         static final Pattern REFERENCE_PATTERN = Pattern.compile("(?<!\\\\)\\$(?!\\d)(\\w+)");
 
@@ -92,7 +272,9 @@ public class ReferenceHelper {
                 final Reference r = create(ret);
                 final String sub = Argument.generateValue(json, r);
                 final String updated = ret.substring(0, r.start) + sub + ret.substring(r.end);
-                if (ret.equals(updated)) throw runExF("Self reference: {}", sub);
+                if (ret.equals(updated)) {
+                    throw runExF("Self reference: {}", sub);
+                }
                 ret = updated;
             } while (containsReferences(ret));
             return JsonValue.readHjson(ret, FORMATTER);
@@ -124,29 +306,29 @@ public class ReferenceHelper {
                     final int closing;
                     final int read;
                     switch (c) {
-                        case '[' :
+                        case '[':
                             final int bk = findClosing(val, i, '[', ']');
-                            closing = read = findNext(val, bk,',', false);
+                            closing = read = findNext(val, bk, ',', false);
                             break;
-                        case '{' :
+                        case '{':
                             final int bc = findClosing(val, i, '{', '}');
-                            closing = read = findNext(val, bc,',', false);
+                            closing = read = findNext(val, bc, ',', false);
                             break;
-                        case '(' :
+                        case '(':
                             final int pr = findClosing(val, i, '(', ')');
-                            closing = read = findNext(val, pr,',', false);
+                            closing = read = findNext(val, pr, ',', false);
                             break;
-                        case '"' :
+                        case '"':
                             i++;
                             read = findNext(val, i, '"', true);
                             closing = findNext(val, read, ',', false);
                             break;
-                        case '\'' :
+                        case '\'':
                             i++;
                             read = findNext(val, i, '\'', true);
                             closing = findNext(val, read, ',', false);
                             break;
-                        default :
+                        default:
                             closing = read = findNext(val, i, ',', false);
                     }
                     args.add(val.substring(i, read));
@@ -155,9 +337,11 @@ public class ReferenceHelper {
                 i++;
             }
         }
+
     }
 
     private static class Argument {
+
         /** A pattern used for testing whether a string contains arguments. */
         static final Pattern ARGUMENT_PATTERN = Pattern.compile("@(\\d+)");
 
@@ -242,12 +426,16 @@ public class ReferenceHelper {
             final JsonObject clone = new JsonObject();
             for (JsonObject.Member member : json) {
                 final String name = replaceString(member.getName(), r);
-                if (name.isEmpty()) continue;
+                if (name.isEmpty()) {
+                    continue;
+                }
 
                 final JsonValue value = member.getValue();
                 if (value.isString()) {
                     final String s = replaceString(value.asString(), r);
-                    if (s.isEmpty()) continue;
+                    if (s.isEmpty()) {
+                        continue;
+                    }
                     clone.add(name, JsonValue.readHjson(quote(s), FORMATTER));
                 } else if (value.isObject()) {
                     clone.add(name, replaceObject(value.asObject(), r));
@@ -265,7 +453,9 @@ public class ReferenceHelper {
             for (JsonValue value : json) {
                 if (value.isString()) {
                     final String s = replaceString(value.asString(), r);
-                    if (s.isEmpty()) continue;
+                    if (s.isEmpty()) {
+                        continue;
+                    }
                     clone.add(s);
                 } else if (value.isObject()) {
                     clone.add(replaceObject(value.asObject(), r));
@@ -305,163 +495,7 @@ public class ReferenceHelper {
             }
             return new Argument(start, end, index, optional, defaultVal);
         }
+
     }
 
-    /**
-     * Finds the first question mark (optional indicator) after the given index.
-     *
-     * @param val A raw string which may or may not contain parentheses.
-     * @param index The first index to check for a parenthesis.
-     * @return The index of the parenthesis, or else -1.
-     */
-    private static int findQuestion(String val, int index) {
-        return findSpecialCharacter(val, index, '?');
-    }
-
-    /**
-     * Finds the first opening parenthesis after the given index.
-     *
-     * @param val A raw string which may or may not contain parentheses.
-     * @param index The first index to check for a parenthesis.
-     * @return The index of the parenthesis, or else -1.
-     */
-    private static int findOpening(String val, int index) {
-        return findSpecialCharacter(val, index, '(');
-    }
-
-    /**
-     * Finds the first occurrence of the given character, ignoring whitespace. This
-     * function will return -1 given another alphanumeric character comes first.
-     *
-     * @param val A raw string which may or may not contain parentheses.
-     * @param index The first index to check for a parenthesis.
-     * @param f The character to search for.
-     * @return The index of the parenthesis, or else -1.
-     */
-    private static int findSpecialCharacter(String val, int index, char f) {
-        for (int i = index; i < val.length(); i++) {
-            final char c = val.charAt(i);
-            if (c == f) return i;
-            if (Character.isLetterOrDigit(c)) return -1;
-        }
-        return -1;
-    }
-
-    /**
-     * Finds a balanced closing parenthesis matching the one at the current position.
-     * This function does support escaped, quoted, and nested parentheses.
-     *
-     * @throws IllegalStateException if a balanced closer is not found.
-     * @param val The raw string which is expected to contain a closer.
-     * @param opening The index of the opening parenthesis.
-     * @param open The character to be balanced with.
-     * @param close The character being searched for.
-     * @return The index of the closing parenthesis.
-     */
-    private static int findClosing(String val, int opening, char open, char close) {
-        int numP = 0;
-        boolean dq = false;
-        boolean sq = false;
-        boolean esc = false;
-        for (int i = opening; i < val.length(); i++) {
-            if (esc) {
-                esc = false;
-                continue;
-            }
-            final char c = val.charAt(i);
-            if (c == '\\') {
-                esc = true;
-            } else if (c == '"') {
-                dq = !dq;
-            } else if (c == '\'') {
-                sq = !sq;
-            } else if (c == open) {
-                if (!dq && !sq) numP++;
-            } else if (c == close) {
-                if (!dq && !sq && --numP == 0) return i;
-            }
-        }
-        throw new IllegalStateException("Missing " + close + " in function");
-    }
-
-    /**
-     * Finds the next possible instance of this character, ignoring escaped characters.
-     *
-     * @param val The raw string being searched through.
-     * @param index The starting index to search from.
-     * @param f The exact character to find.
-     * @param required Whether to throw an exception if the character is missing.
-     * @return The index of this character, or else end of string.
-     */
-    private static int findNext(String val, int index, char f, boolean required) {
-        boolean esc = false;
-        int i = index;
-        while(i < val.length()) {
-            if (esc) {
-                esc = false;
-                i++;
-                continue;
-            }
-            final char c = val.charAt(i);
-            if (c == '\\') esc = true;
-            else if (c == f) return i;
-
-            if (f == '\"' || f == '\'') {
-                i++;
-                continue;
-            }
-            if (c == '(') i = findClosing(val, i, '(', ')');
-            else if (c == '[') i = findClosing(val, i, '[', ']');
-            else if (c == '{') i = findClosing(val, i, '{', '}');
-            else i++;
-        }
-        if (required) {
-            throw new IllegalStateException("Missing " + f + " in function");
-        }
-        return val.length();
-    }
-
-
-    /**
-     * Determines whether the input text is string data and should be quoted.
-     * If it is, returns the text in quotes.
-     *
-     * @param s The raw parameter value input to the template
-     * @return The quoted text, else the original text.
-     */
-    private static String quote(String s) {
-        final char first = s.charAt(0);
-        final char last = s.charAt(s.length() - 1);
-        if (Character.isWhitespace(first)) {
-            final boolean single = containsRawDoubleQuote(s);
-            // Only possible if the input was already quoted.
-            return single ? '\'' + s + '\'' : '"' + s + '"';
-        } else if ((first == '{' && last == '}') || (first == '[' && last == ']')) {
-            return s;
-        }
-        for (char c : s.toCharArray()) {
-            if (Character.isWhitespace(c)) {
-                final boolean single = containsRawDoubleQuote(s);
-                return single ? '\'' + s + '\'' : '"' + s + '"';
-            }
-        }
-        return s;
-    }
-
-    /**
-     * Determines whether the input text contains raw double quotes (") with
-     * no escape characters.
-     *
-     * @param s The raw parameter value input to the template
-     * @return Whether an unescaped double quote is found.
-     */
-    private static boolean containsRawDoubleQuote(String s) {
-        boolean escaped = false;
-        for (char c : s.toCharArray()) {
-            if (c == '\\') escaped = true;
-            else if (c == '"' && !escaped) return true;
-            else escaped = false;
-        }
-        return false;
-    }
 }

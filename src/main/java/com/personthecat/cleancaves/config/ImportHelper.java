@@ -8,12 +8,20 @@ import org.hjson.JsonValue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
-import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 import static com.personthecat.cleancaves.io.SafeFileIO.getFileRecursive;
+import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
-public class ImportHelper {
+public final class ImportHelper {
+
+    private ImportHelper() { }
 
     /**
      * Gets a JSON from the map by filename. A variable name may optionally be appended
@@ -49,7 +57,7 @@ public class ImportHelper {
         final Import helper = new Import(exp);
         // Get the JSON object by filename.
         final JsonObject json = helper.loadObject(definitions)
-            .orElseThrow(() -> runExF("Use of undeclared import: {}", exp));
+                .orElseThrow(() -> runExF("Use of undeclared import: {}", exp));
         return readImport(json, helper);
     }
 
@@ -57,8 +65,7 @@ public class ImportHelper {
     public static JsonObject getRequiredImport(String exp) {
         Objects.requireNonNull(exp, "Imports may not be null");
         final Import helper = new Import(exp);
-        final JsonObject json = helper.tryLoadObject()
-            .orElseThrow(() -> runExF("Invalid import: {}", exp));
+        final JsonObject json = helper.tryLoadObject().orElseThrow(() -> runExF("Invalid import: {}", exp));
         return readImport(json, helper);
     }
 
@@ -68,28 +75,6 @@ public class ImportHelper {
         final Map<Path, JsonObject> definitions = new HashMap<>();
         locateRecursively(definitions, exp);
         return definitions;
-    }
-
-    private static void locateRecursively(Map<Path, JsonObject> definitions, String exp) {
-        final Import helper = new Import(exp);
-        final Path file = helper.locateFile()
-            .orElseThrow(() -> runExF("Unable to locate {} in {}", helper.filename, exp));
-        if (definitions.containsKey(file)) {
-            return;
-        }
-        final JsonObject json = PresetReader.getPresetJson(file)
-            .orElseThrow(() -> runExF("Error parsing {}", file));
-        definitions.put(file, json);
-        final JsonValue imports = json.get(PresetExpander.IMPORTS);
-        if (imports != null) {
-            final JsonArray importArray = HjsonTools.asOrToArray(imports);
-            for (JsonValue importExp : importArray) {
-                if (!importExp.isString()) {
-                    throw runExF("Invalid import expression: {}", importExp);
-                }
-                locateRecursively(definitions, importExp.asString());
-            }
-        }
     }
 
     /** Returns the list of keys that were imported by this expression. */
@@ -103,8 +88,29 @@ public class ImportHelper {
             return Collections.singletonList(helper.variable.get());
         }
         final JsonObject json = helper.loadObject(definitions)
-            .orElseThrow(() -> runExF("Expression not validated in time: {}", exp));
+                .orElseThrow(() -> runExF("Expression not validated in time: {}", exp));
         return json.getNames();
+    }
+
+    private static void locateRecursively(Map<Path, JsonObject> definitions, String exp) {
+        final Import helper = new Import(exp);
+        final Path file = helper.locateFile()
+                .orElseThrow(() -> runExF("Unable to locate {} in {}", helper.filename, exp));
+        if (definitions.containsKey(file)) {
+            return;
+        }
+        final JsonObject json = PresetReader.getPresetJson(file).orElseThrow(() -> runExF("Error parsing {}", file));
+        definitions.put(file, json);
+        final JsonValue imports = json.get(PresetExpander.IMPORTS);
+        if (imports != null) {
+            final JsonArray importArray = HjsonTools.asOrToArray(imports);
+            for (JsonValue importExp : importArray) {
+                if (!importExp.isString()) {
+                    throw runExF("Invalid import expression: {}", importExp);
+                }
+                locateRecursively(definitions, importExp.asString());
+            }
+        }
     }
 
     /** Reads JSON data from an imported preset based on an expression. */
@@ -133,6 +139,7 @@ public class ImportHelper {
     /** Splits an import statement into its tokens. */
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private static class Import {
+
         final String filename;
         final Optional<String> variable;
         final Optional<String> as;
@@ -153,11 +160,12 @@ public class ImportHelper {
          * iteration order.
          */
         Optional<JsonObject> loadObject(Map<Path, JsonObject> defs) {
-            return defs.entrySet().stream()
-                .filter(e -> this.matches(e.getKey()))
-                .min(Comparator.comparingInt((Map.Entry<Path, JsonObject> e) -> e.getKey().getNameCount())
-                    .thenComparing(e -> e.getKey().toString()))
-                .map(Map.Entry::getValue);
+            return defs.entrySet()
+                    .stream()
+                    .filter(e -> this.matches(e.getKey()))
+                    .min(Comparator.comparingInt((Map.Entry<Path, JsonObject> e) -> e.getKey().getNameCount())
+                                    .thenComparing(e -> e.getKey().toString()))
+                    .map(Map.Entry::getValue);
         }
 
         Optional<JsonObject> tryLoadObject() {
@@ -176,5 +184,7 @@ public class ImportHelper {
             // Users can essentially be as specific as they like.
             return f.toString().replace("\\", "/").endsWith(this.filename);
         }
+
     }
+
 }

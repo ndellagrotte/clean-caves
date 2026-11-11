@@ -13,7 +13,8 @@ public class RandomChunkSelector {
      * Obtain a random value from the three inputs using HashGenerator.
      * The threshold reflects the probability of selection.
      */
-    public boolean getBooleanForCoordinates(int ID, int x, int y, double threshold) {
-        return noise.getHash(ID, x, y) > threshold;
+    public boolean getBooleanForCoordinates(int id, int x, int y, double threshold) {
+        return noise.getHash(id, x, y) > threshold;
     }
+
 }

@@ -8,9 +8,7 @@ import org.hjson.JsonObject;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The safety net for replacing Lombok's generated builders with hand-written ones.
@@ -25,84 +23,82 @@ class SettingsBuilderTest {
     @DisplayName("NoiseSettings defaults match the documented values")
     void noiseSettingsDefaults() {
         final NoiseSettings s = NoiseSettings.builder().build();
-        assertTrue(s.seed().isEmpty());
-        assertEquals(1.0F, s.frequency());
-        assertEquals(0.0F, s.threshold().min());
-        assertEquals(0.0F, s.threshold().max());
-        assertEquals(1.0F, s.stretch());
-        assertEquals(1.0F, s.lacunarity());
-        assertEquals(0.5F, s.gain());
-        assertEquals(0.45F, s.jitterX());
-        assertEquals(0.45F, s.jitterY());
-        assertEquals(0.45F, s.jitterZ());
-        assertEquals(1, s.octaves());
-        assertEquals(0, s.offset());
-        assertFalse(s.perturb());
-        assertFalse(s.invert());
-        assertFalse(s.cache());
-        assertFalse(s.dummy());
-        assertEquals(1.0F, s.dummyOutput());
-        assertEquals(Interp.Hermite, s.interp());
-        assertEquals(NoiseType.SimplexFractal, s.type());
-        assertEquals(FractalType.FBM, s.fractal());
+        assertThat(s.seed().isEmpty()).isTrue();
+        assertThat(s.frequency()).isEqualTo(1.0F);
+        assertThat(s.threshold().min()).isEqualTo(0.0F);
+        assertThat(s.threshold().max()).isEqualTo(0.0F);
+        assertThat(s.stretch()).isEqualTo(1.0F);
+        assertThat(s.lacunarity()).isEqualTo(1.0F);
+        assertThat(s.gain()).isEqualTo(0.5F);
+        assertThat(s.jitterX()).isEqualTo(0.45F);
+        assertThat(s.jitterY()).isEqualTo(0.45F);
+        assertThat(s.jitterZ()).isEqualTo(0.45F);
+        assertThat(s.octaves()).isEqualTo(1);
+        assertThat(s.offset()).isEqualTo(0);
+        assertThat(s.perturb()).isFalse();
+        assertThat(s.invert()).isFalse();
+        assertThat(s.cache()).isFalse();
+        assertThat(s.dummy()).isFalse();
+        assertThat(s.dummyOutput()).isEqualTo(1.0F);
+        assertThat(s.interp()).isEqualTo(Interp.Hermite);
+        assertThat(s.type()).isEqualTo(NoiseType.SimplexFractal);
+        assertThat(s.fractal()).isEqualTo(FractalType.FBM);
     }
 
     @Test
     @DisplayName("NoiseMapSettings defaults match the documented values")
     void noiseMapSettingsDefaults() {
         final NoiseMapSettings s = NoiseMapSettings.builder().build();
-        assertEquals(1.0F, s.frequency());
-        assertEquals(NoiseType.SimplexFractal, s.type());
-        assertEquals(1, s.octaves());
-        assertEquals(-1, s.range().min());
-        assertEquals(1, s.range().max());
-        assertTrue(s.dummyOutput().isEmpty());
+        assertThat(s.frequency()).isEqualTo(1.0F);
+        assertThat(s.type()).isEqualTo(NoiseType.SimplexFractal);
+        assertThat(s.octaves()).isEqualTo(1);
+        assertThat(s.range().min()).isEqualTo(-1);
+        assertThat(s.range().max()).isEqualTo(1);
+        assertThat(s.dummyOutput().isEmpty()).isTrue();
     }
 
     @Test
     @DisplayName("NoiseRegionSettings defaults match the documented values")
     void noiseRegionSettingsDefaults() {
         final NoiseRegionSettings s = NoiseRegionSettings.builder().build();
-        assertEquals(1.0F, s.frequency());
-        assertEquals(1.0F, s.dummyOutput());
-        assertEquals(NoiseType.SimplexFractal, s.type());
-        assertFalse(s.invert());
+        assertThat(s.frequency()).isEqualTo(1.0F);
+        assertThat(s.dummyOutput()).isEqualTo(1.0F);
+        assertThat(s.type()).isEqualTo(NoiseType.SimplexFractal);
+        assertThat(s.invert()).isFalse();
     }
 
     @Test
     @DisplayName("toBuilder round-trips every component")
     void toBuilderRoundTrips() {
         final NoiseSettings original = NoiseSettings.builder()
-            .frequency(0.0143F)
-            .threshold(Range.of(-0.6F))
-            .stretch(0.5F)
-            .octaves(3)
-            .offset(12)
-            .invert(true)
-            .cache(true)
-            .type(NoiseType.Cellular)
-            .build();
-        assertEquals(original, original.toBuilder().build());
+                .frequency(0.0143F)
+                .threshold(Range.of(-0.6F))
+                .stretch(0.5F)
+                .octaves(3)
+                .offset(12)
+                .invert(true)
+                .cache(true)
+                .type(NoiseType.Cellular)
+                .build();
+        assertThat(original.toBuilder().build()).isEqualTo(original);
     }
 
     @Test
     @DisplayName("a preset value overrides only the field it names")
     void jsonOverridesOneFieldAtATime() {
         final NoiseSettings defaults = NoiseSettings.builder().octaves(4).frequency(0.5F).build();
-        final NoiseSettings parsed =
-            NoiseSettings.from(new JsonObject().add("frequency", 0.01), defaults);
-        assertEquals(0.01F, parsed.frequency());
-        assertEquals(4, parsed.octaves(), "inherited fields must survive");
+        final NoiseSettings parsed = NoiseSettings.from(new JsonObject().add("frequency", 0.01), defaults);
+        assertThat(parsed.frequency()).isEqualTo(0.01F);
+        assertThat(parsed.octaves()).as("inherited fields must survive").isEqualTo(4);
     }
 
     @Test
     @DisplayName("the `jitter` shorthand sets all three axes")
     void jitterShorthandSetsAllAxes() {
-        final NoiseSettings parsed =
-            NoiseSettings.from(new JsonObject().add("jitter", 0.3));
-        assertEquals(0.3F, parsed.jitterX());
-        assertEquals(0.3F, parsed.jitterY());
-        assertEquals(0.3F, parsed.jitterZ());
+        final NoiseSettings parsed = NoiseSettings.from(new JsonObject().add("jitter", 0.3));
+        assertThat(parsed.jitterX()).isEqualTo(0.3F);
+        assertThat(parsed.jitterY()).isEqualTo(0.3F);
+        assertThat(parsed.jitterZ()).isEqualTo(0.3F);
     }
 
     @Test
@@ -110,7 +106,8 @@ class SettingsBuilderTest {
     void explicitAxisOverridesShorthand() {
         final JsonObject json = new JsonObject().add("jitter", 0.3).add("jitterY", 0.9);
         final NoiseSettings parsed = NoiseSettings.from(json);
-        assertEquals(0.3F, parsed.jitterX());
-        assertEquals(0.9F, parsed.jitterY());
+        assertThat(parsed.jitterX()).isEqualTo(0.3F);
+        assertThat(parsed.jitterY()).isEqualTo(0.9F);
     }
+
 }

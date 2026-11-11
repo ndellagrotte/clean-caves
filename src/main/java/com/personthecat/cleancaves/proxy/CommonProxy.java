@@ -14,4 +14,5 @@ public class CommonProxy implements IProxy {
     public Optional<String> chatWidth(String[] args) {
         return Optional.empty();
     }
+
 }

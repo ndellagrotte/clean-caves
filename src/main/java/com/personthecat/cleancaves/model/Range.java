@@ -1,9 +1,9 @@
 package com.personthecat.cleancaves.model;
 
-import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
+import javax.annotation.Nonnull;
 
 import static com.personthecat.cleancaves.util.CommonMethods.f;
 import static com.personthecat.cleancaves.util.CommonMethods.numBetween;
@@ -16,18 +16,6 @@ import static com.personthecat.cleancaves.util.CommonMethods.numBetween;
  * everything else.
  */
 public sealed interface Range extends Iterable<Integer> {
-
-    int min();
-
-    int max();
-
-    int rand(Random rand);
-
-    boolean contains(int num);
-
-    int diff();
-
-    boolean isEmpty();
 
     static Range of(int a, int b) {
         return a > b ? new Bounded(b, a) : new Bounded(a, b);
@@ -53,6 +41,18 @@ public sealed interface Range extends Iterable<Integer> {
     static Range empty() {
         return Empty.INSTANCE;
     }
+
+    int min();
+
+    int max();
+
+    int rand(Random rand);
+
+    boolean contains(int num);
+
+    int diff();
+
+    boolean isEmpty();
 
     record Bounded(int min, int max) implements Range {
 
@@ -80,6 +80,7 @@ public sealed interface Range extends Iterable<Integer> {
         @Override
         public Iterator<Integer> iterator() {
             return new Iterator<>() {
+
                 int i = Bounded.this.min;
 
                 @Override
@@ -91,6 +92,7 @@ public sealed interface Range extends Iterable<Integer> {
                 public Integer next() {
                     return this.i++;
                 }
+
             };
         }
 
@@ -98,6 +100,7 @@ public sealed interface Range extends Iterable<Integer> {
         public String toString() {
             return f("Range[{}~{}]", this.min, this.max);
         }
+
     }
 
     record Empty() implements Range {
@@ -144,5 +147,7 @@ public sealed interface Range extends Iterable<Integer> {
         public String toString() {
             return "Range[empty]";
         }
+
     }
+
 }

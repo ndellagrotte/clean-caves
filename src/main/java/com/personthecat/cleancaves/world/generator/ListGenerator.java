@@ -2,15 +2,15 @@ package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.data.ConditionSettings;
 import com.personthecat.cleancaves.model.Conditions;
-import net.minecraft.world.World;
 import org.apache.commons.lang3.tuple.Pair;
+
+import net.minecraft.world.World;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-
 
 public abstract class ListGenerator<T> {
 
@@ -20,18 +20,16 @@ public abstract class ListGenerator<T> {
     public ListGenerator(List<T> features, Function<T, ConditionSettings> getter, World world) {
         Objects.requireNonNull(world, "Nullable world types are not yet supported.");
         this.world = new WeakReference<>(world);
-        this.features = features.stream()
-            .map(f -> Pair.of(f, Conditions.compile(getter.apply(f), world)))
-            .toList();
-    }
-
-    protected final World getWorld() {
-        return Objects.requireNonNull(world.get(), "World reference has been culled.");
+        this.features = features.stream().map(f -> Pair.of(f, Conditions.compile(getter.apply(f), world))).toList();
     }
 
     public void generate(PrimerContext ctx) {
         // Stubbed for other global conditions.
         this.generateChecked(ctx);
+    }
+
+    protected final World getWorld() {
+        return Objects.requireNonNull(world.get(), "World reference has been culled.");
     }
 
     protected abstract void generateChecked(PrimerContext ctx);
@@ -41,4 +39,5 @@ public abstract class ListGenerator<T> {
             fn.accept(feature.getLeft(), feature.getRight());
         }
     }
+
 }

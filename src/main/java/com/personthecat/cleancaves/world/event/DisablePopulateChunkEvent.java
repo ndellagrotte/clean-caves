@@ -1,12 +1,15 @@
 package com.personthecat.cleancaves.world.event;
 
 import com.personthecat.cleancaves.config.ConfigFile;
+
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent.Populate.EventType;
 import net.minecraftforge.fml.common.eventhandler.Event;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-public class DisablePopulateChunkEvent {
+public final class DisablePopulateChunkEvent {
+
+    private DisablePopulateChunkEvent() { }
 
     @SubscribeEvent
     public static void onPopulateChunk(PopulateChunkEvent.Populate event) {
@@ -16,4 +19,5 @@ public class DisablePopulateChunkEvent {
             event.setResult(Event.Result.DENY);
         }
     }
+
 }

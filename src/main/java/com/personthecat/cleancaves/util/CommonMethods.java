@@ -1,5 +1,8 @@
 package com.personthecat.cleancaves.util;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.message.ParameterizedMessage;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
@@ -8,8 +11,6 @@ import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.common.BiomeDictionary.Type;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.message.ParameterizedMessage;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -23,7 +24,7 @@ import java.util.Random;
  */
 public final class CommonMethods {
 
-    private CommonMethods() {}
+    private CommonMethods() { }
 
     /** Returns a clean-looking, general-purpose RuntimeException. */
     public static RuntimeException runEx(String x) {
@@ -147,4 +148,5 @@ public final class CommonMethods {
         }
         return Optional.of(block.getStateFromMeta(meta));
     }
+
 }

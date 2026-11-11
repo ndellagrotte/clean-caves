@@ -2,12 +2,14 @@ package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import com.personthecat.cleancaves.world.BiomeSearch;
+
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 import java.util.Random;
 
 public class PrimerContext {
+
     final BiomeSearch biomes;
     final int[][] heightmap;
     final World world;
@@ -18,14 +20,8 @@ public class PrimerContext {
     final int offsetZ;
     final ChunkPrimer primer;
 
-    public PrimerContext(
-        BiomeSearch biomes,
-        int[][] heightmap,
-        World world,
-        int chunkX,
-        int chunkZ,
-        ChunkPrimer primer
-    ) {
+    public PrimerContext(BiomeSearch biomes, int[][] heightmap, World world, int chunkX, int chunkZ,
+            ChunkPrimer primer) {
         this.biomes = biomes;
         this.heightmap = heightmap;
         this.world = world;
@@ -36,4 +32,5 @@ public class PrimerContext {
         this.offsetZ = chunkZ * 16;
         this.primer = primer;
     }
+
 }

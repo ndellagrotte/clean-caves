@@ -1,19 +1,35 @@
 package com.personthecat.cleancaves.config;
 
-import com.personthecat.cleancaves.data.*;
+import com.personthecat.cleancaves.Reference;
+import com.personthecat.cleancaves.data.CaveBlockSettings;
+import com.personthecat.cleancaves.data.CavernSettings;
+import com.personthecat.cleancaves.data.ClusterSettings;
+import com.personthecat.cleancaves.data.ConditionSettings;
+import com.personthecat.cleancaves.data.DecoratorSettings;
+import com.personthecat.cleancaves.data.LayerSettings;
+import com.personthecat.cleancaves.data.NoiseMapSettings;
+import com.personthecat.cleancaves.data.NoiseRegionSettings;
+import com.personthecat.cleancaves.data.NoiseSettings;
+import com.personthecat.cleancaves.data.PillarSettings;
+import com.personthecat.cleancaves.data.RavineSettings;
+import com.personthecat.cleancaves.data.ShellSettings;
+import com.personthecat.cleancaves.data.StalactiteSettings;
+import com.personthecat.cleancaves.data.StructureSettings;
+import com.personthecat.cleancaves.data.TunnelSettings;
+import com.personthecat.cleancaves.data.WallDecoratorSettings;
 import com.personthecat.cleancaves.model.Direction;
 import com.personthecat.cleancaves.model.FloatRange;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.model.ScalableFloat;
-import net.minecraft.world.biome.Biome;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import org.apache.logging.log4j.Level;
-import org.hjson.JsonObject;
-
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.personthecat.cleancaves.Reference;
+import org.hjson.JsonObject;
+
+import net.minecraft.world.biome.Biome;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+
+import java.util.List;
 
 /**
  *   This class is intended for detecting a series of common errors in the preset creation
@@ -29,19 +45,28 @@ import com.personthecat.cleancaves.Reference;
  * validating presets, as doing so should improve readability elsewhere.
  */
 public class PresetTester {
+
     private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
 
-
     private final CavePreset preset;
-    private final Level low, high;
+    private final Level low;
+    private final Level high;
     private final String name;
 
     /** Primary constructor */
     public PresetTester(CavePreset preset, String name, boolean allowCrash) {
         this.low = allowCrash ? Level.WARN : Level.INFO;
-        this.high = allowCrash ? Level.FATAL: Level.WARN;
+        this.high = allowCrash ? Level.FATAL : Level.WARN;
         this.preset = preset;
         this.name = name;
+    }
+
+    private static boolean isSide(Direction d) {
+        return d == Direction.NORTH || d == Direction.SOUTH || d == Direction.EAST || d == Direction.WEST;
+    }
+
+    private static String join(String... path) {
+        return String.join(".", path);
     }
 
     /**
@@ -69,12 +94,13 @@ public class PresetTester {
     private void debugExistingFields(JsonObject json) {
         final List<String> used = json.getUsedPaths();
         if (used.isEmpty()) {
-            log.info("No fields were detected in {}. If you were expecting fields, "
-                + "you may have commented it out.", name);
+            log.info("No fields were detected in {}. If you were expecting fields, " + "you may have commented it out.",
+                    name);
             return;
         }
         log.info("The following fields were found in {}. If you do not see one, "
-            + "you may have accidentally commented it out.", name);
+                        + "you may have accidentally commented it out.",
+                name);
         for (String s : used) {
             log.info(" + {} ", s);
         }
@@ -87,15 +113,15 @@ public class PresetTester {
             log.info("No unused fields were detected inside of {}", name);
             return;
         }
-        log.info("The following fields were never used by {}. Any field listed " +
-            "below has no effect whatsoever.", name);
+        log.info("The following fields were never used by {}. Any field listed " + "below has no effect whatsoever.",
+                name);
         for (String s : unused) {
             log.log(low, " - {}", s);
         }
     }
 
     private void testTunnels(List<TunnelSettings> s) {
-        final String path = CavePreset.Keys.tunnels;
+        final String path = CavePreset.Keys.TUNNELS;
         for (TunnelSettings cfg : s) {
             this.testTunnel(cfg, path);
             this.testConditions(cfg.conditions(), path);
@@ -104,16 +130,16 @@ public class PresetTester {
     }
 
     private void testTunnel(TunnelSettings s, String path) {
-        this.testDistance(s.distance(), join(path, TunnelSettings.Keys.distance));
-        this.assertPositive(s.systemDensity(), join(path, TunnelSettings.Keys.systemDensity));
-        this.testAngle(s.yaw(), join(path, TunnelSettings.Keys.yaw));
-        this.testAngle(s.pitch(), join(path, TunnelSettings.Keys.pitch));
-        this.testScale(s.scale(), join(path, TunnelSettings.Keys.scale));
-        s.branches().ifPresent(b -> this.testTunnel(b, join(path, TunnelSettings.Keys.branches)));
+        this.testDistance(s.distance(), join(path, TunnelSettings.Keys.DISTANCE));
+        this.assertPositive(s.systemDensity(), join(path, TunnelSettings.Keys.SYSTEM_DENSITY));
+        this.testAngle(s.yaw(), join(path, TunnelSettings.Keys.YAW));
+        this.testAngle(s.pitch(), join(path, TunnelSettings.Keys.PITCH));
+        this.testScale(s.scale(), join(path, TunnelSettings.Keys.SCALE));
+        s.branches().ifPresent(b -> this.testTunnel(b, join(path, TunnelSettings.Keys.BRANCHES)));
     }
 
     private void testRavines(List<RavineSettings> s) {
-        final String path = CavePreset.Keys.tunnels;
+        final String path = CavePreset.Keys.TUNNELS;
         for (RavineSettings cfg : s) {
             this.testRavine(cfg, path);
             this.testConditions(cfg.conditions(), path);
@@ -122,15 +148,15 @@ public class PresetTester {
     }
 
     private void testRavine(RavineSettings s, String path) {
-        this.testDistance(s.distance(), join(path, RavineSettings.Keys.distance));
-        this.testAngle(s.yaw(), join(path, RavineSettings.Keys.yaw));
-        this.testAngle(s.pitch(), join(path, RavineSettings.Keys.pitch));
-        this.testScale(s.scale(), join(path, RavineSettings.Keys.scale));
-        this.testNoise(s.walls(), join(path, RavineSettings.Keys.walls));
+        this.testDistance(s.distance(), join(path, RavineSettings.Keys.DISTANCE));
+        this.testAngle(s.yaw(), join(path, RavineSettings.Keys.YAW));
+        this.testAngle(s.pitch(), join(path, RavineSettings.Keys.PITCH));
+        this.testScale(s.scale(), join(path, RavineSettings.Keys.SCALE));
+        this.testNoise(s.walls(), join(path, RavineSettings.Keys.WALLS));
     }
 
     private void testCaverns(List<CavernSettings> s) {
-        final String path = CavePreset.Keys.caverns;
+        final String path = CavePreset.Keys.CAVERNS;
         for (CavernSettings cfg : s) {
             this.testCavern(cfg, path);
             this.testConditions(cfg.conditions(), path);
@@ -139,23 +165,23 @@ public class PresetTester {
     }
 
     private void testCavern(CavernSettings s, String path) {
-        final String fullPath = join(path, CavernSettings.Keys.generators);
+        final String fullPath = join(path, CavernSettings.Keys.GENERATORS);
         for (int i = 0; i < s.generators().size(); i++) {
             this.testNoise(s.generators().get(i), fullPath + "[" + i + "]");
         }
         if (s.wallInterpolation()) {
-            log.log(low, "{} is experimental. There may be bugs.", join(path, CavernSettings.Keys.wallInterpolation));
+            log.log(low, "{} is experimental. There may be bugs.", join(path, CavernSettings.Keys.WALL_INTERPOLATION));
         }
         if (s.wallCurveRatio() > 2.0) {
-            log.log(low, "{} is a little high. You may see borders.", join(path, CavernSettings.Keys.wallCurveRatio));
+            log.log(low, "{} is a little high. You may see borders.", join(path, CavernSettings.Keys.WALL_CURVE_RATIO));
         }
-        s.walls().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.walls)));
-        s.offset().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.offset)));
-        s.wallOffset().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.wallOffset)));
+        s.walls().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.WALLS)));
+        s.offset().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.OFFSET)));
+        s.wallOffset().ifPresent(n -> this.testNoise(n, join(path, CavernSettings.Keys.WALL_OFFSET)));
     }
 
     private void testStructures(List<StructureSettings> s) {
-        final String path = CavePreset.Keys.structures;
+        final String path = CavePreset.Keys.STRUCTURES;
         for (StructureSettings cfg : s) {
             this.testStructure(cfg, path);
             this.testConditions(cfg.conditions(), path);
@@ -178,7 +204,7 @@ public class PresetTester {
     }
 
     private void testClusters(List<ClusterSettings> clusters) {
-        final String path = CavePreset.Keys.clusters;
+        final String path = CavePreset.Keys.CLUSTERS;
         for (ClusterSettings cfg : clusters) {
             final String fullPath = path + "[states=" + cfg.states().get(0) + "...]";
             this.testCluster(cfg, fullPath);
@@ -189,14 +215,14 @@ public class PresetTester {
     private void testCluster(ClusterSettings s, String path) {
         final Range height = s.conditions().height();
         if (!height.contains(s.centerHeight().min()) || height.contains(s.centerHeight().max())) {
-            final String center = ClusterSettings.Keys.centerHeight;
+            final String center = ClusterSettings.Keys.CENTER_HEIGHT;
             log.log(low, "Invalid heights @ {}. {} does not contain {}", path, height, center);
         }
         this.testChance(s.chance(), path);
     }
 
     private void testLayers(List<LayerSettings> s) {
-        final String path = CavePreset.Keys.layers;
+        final String path = CavePreset.Keys.LAYERS;
         int previousHeight = -1;
 
         for (LayerSettings l : s) {
@@ -212,9 +238,8 @@ public class PresetTester {
         }
     }
 
-
     private void testStalactites(List<StalactiteSettings> s) {
-        final String path = CavePreset.Keys.stalactites;
+        final String path = CavePreset.Keys.STALACTITES;
         for (StalactiteSettings cfg : s) {
             final String fullPath = path + "[state" + cfg.state() + "]";
             this.testStalactite(cfg, fullPath);
@@ -227,7 +252,7 @@ public class PresetTester {
     }
 
     private void testPillars(List<PillarSettings> s) {
-        final String path = CavePreset.Keys.pillars;
+        final String path = CavePreset.Keys.PILLARS;
         for (PillarSettings cfg : s) {
             final String fullPath = path + "[state=" + cfg.state() + "]";
             this.testConditions(cfg.conditions(), fullPath);
@@ -257,15 +282,18 @@ public class PresetTester {
     }
 
     private void testCaveBlocks(List<CaveBlockSettings> caveBlocks, String path) {
-        int lastMinHeight = -1, lastMaxHeight = -1;
+        int lastMinHeight = -1;
+        int lastMaxHeight = -1;
         boolean foundGuaranteed = false;
 
         for (CaveBlockSettings c : caveBlocks) {
             final String fullPath = path + ".caveBlocks[states=" + c.states() + "...]";
             // Check for unreachable objects.
             if (foundGuaranteed) {
-                log.log(high, "Additional CaveBlock objects found despite an earlier object where `chance=1`. " +
-                    "{} will have no effect.", fullPath);
+                log.log(high,
+                        "Additional CaveBlock objects found despite an earlier object where `chance=1`. "
+                                + "{} will have no effect.",
+                        fullPath);
             }
             final int minY = c.height().min();
             final int maxY = c.height().max();
@@ -282,15 +310,18 @@ public class PresetTester {
     }
 
     private void testWallDecorators(List<WallDecoratorSettings> wallDecorators, String path) {
-        int lastMinHeight = -1, lastMaxHeight = -1;
+        int lastMinHeight = -1;
+        int lastMaxHeight = -1;
         boolean foundGuaranteed = false;
 
         for (WallDecoratorSettings d : wallDecorators) {
             final String fullPath = path + ".wallDecorators[states=" + d.states().get(0) + "...]";
             // Check for unreachable objects.
             if (foundGuaranteed) {
-                log.log(high, "Additional WallDecorator objects found despite an earlier object where `chance=1`. " +
-                    "{} will have no effect.", fullPath);
+                log.log(high,
+                        "Additional WallDecorator objects found despite an earlier object where `chance=1`. "
+                                + "{} will have no effect.",
+                        fullPath);
             }
             final int minY = d.height().min();
             final int maxY = d.height().max();
@@ -309,7 +340,7 @@ public class PresetTester {
     }
 
     private void testShell(ShellSettings shell, String path) {
-        final String decoratorPath = join(path, DecoratorSettings.Keys.shell, ShellSettings.Keys.decorators);
+        final String decoratorPath = join(path, DecoratorSettings.Keys.SHELL, ShellSettings.Keys.DECORATORS);
         for (int i = 0; i < shell.decorators().size(); i++) {
             final ShellSettings.Decorator d = shell.decorators().get(i);
             final String fullPath = decoratorPath + "[" + i + "]";
@@ -320,16 +351,17 @@ public class PresetTester {
 
     private void testDimensionList(List<Integer> dims, boolean blacklist, String path) {
         if (dims.size() > 8) {
-            log.log(low, "High number of dimensions in the dimension list @ {}. Consider " +
-                "{} `blacklistDimensions`.", path, (blacklist ? "disabling" : "enabling"));
+            log.log(low,
+                    "High number of dimensions in the dimension list @ {}. Consider " + "{} `blacklistDimensions`.",
+                    path, (blacklist ? "disabling" : "enabling"));
             log.log(low, "If you want this feature to spawn anywhere, you can leave the list empty.");
         }
     }
 
     private void testBiomeList(List<Biome> biomes, boolean blacklist, String path) {
         if (biomes.size() > ForgeRegistries.BIOMES.getValuesCollection().size() / 2) {
-            log.log(low, "High number of dimensions in the dimension list @ {}. Consider " +
-                "{} `blacklistBiomes`.", path, (blacklist ? "disabling" : "enabling"));
+            log.log(low, "High number of dimensions in the dimension list @ {}. Consider " + "{} `blacklistBiomes`.",
+                    path, (blacklist ? "disabling" : "enabling"));
             log.log(low, "If you want this feature to spawn anywhere, you can leave the list empty.");
         }
     }
@@ -385,8 +417,10 @@ public class PresetTester {
     /** Noise frequency is the same. Include a more helpful message. */
     private void testNoiseFrequency(float frequency, String path) {
         if (frequency < 0 || frequency > 1) {
-            log.log(low, "Poor frequency value @ {}. If you are converting presets from a previous version, " +
-                "`spacing` can be converted using the formula `frequency = 1 / spacing`.", path);
+            log.log(low,
+                    "Poor frequency value @ {}. If you are converting presets from a previous version, "
+                            + "`spacing` can be converted using the formula `frequency = 1 / spacing`.",
+                    path);
         }
     }
 
@@ -419,11 +453,4 @@ public class PresetTester {
         }
     }
 
-    private static boolean isSide(Direction d) {
-        return d == Direction.NORTH || d == Direction.SOUTH || d == Direction.EAST || d == Direction.WEST;
-    }
-
-    private static String join(String... path) {
-        return String.join(".", path);
-    }
 }

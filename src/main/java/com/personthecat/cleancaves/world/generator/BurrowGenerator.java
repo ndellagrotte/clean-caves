@@ -6,6 +6,7 @@ import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.PositionFlags;
 import com.personthecat.cleancaves.world.BiomeSearch;
 import fastnoise.FastNoise;
+
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
@@ -16,10 +17,11 @@ import java.util.Random;
 
 public class BurrowGenerator extends WorldCarver implements TunnelSocket {
 
+    protected final BurrowSettings cfg;
+
     private final List<BlockPos> invalidChunks = new ArrayList<>(BiomeSearch.size());
     private final FastNoise map;
     private final FastNoise offset;
-    protected final BurrowSettings cfg;
     private final PositionFlags caverns;
     private final double mid;
     private final double midShelled;
@@ -30,7 +32,9 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
         this.map = cfg.map().getGenerator(world);
         this.offset = cfg.offset().getGenerator(world);
         this.cfg = cfg;
-        this.caverns = new PositionFlags((int) (16 * 16 * (cfg.radius() + cfg.decorators().shell().radius()) * cfg.stretch() * 2) + 1);
+        this.caverns = new PositionFlags((int) (16 * 16 * (cfg.radius() + cfg.decorators().shell().radius())
+                                * cfg.stretch() * 2)
+                        + 1);
         this.mid = cfg.radius() / Math.pow(cfg.target(), cfg.exponent());
         this.radiusShelled = cfg.radius() + cfg.decorators().shell().radius();
 
@@ -60,25 +64,21 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
         }
     }
 
-    private void fillInvalidChunks(BiomeSearch biomes) {
-        for (BiomeSearch.Data d : biomes.surrounding.get()) {
-            if (!(this.conditions.biomes.test(d.biome()) && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
-                this.invalidChunks.add(new BlockPos(d.centerX(), 0, d.centerZ()));
-            }
-        }
-    }
-
-    private void fillInvalidChunks(int chunkX, int chunkZ) {
-        final int range = ConfigFile.biomeRange;
-        for (int cX = chunkX - range; cX <= chunkX + range; cX++) {
-            for (int cZ = chunkZ - range; cZ < chunkZ + range; cZ++) {
-                final int centerX = cX * 16 + 8;
-                final int centerZ = cZ * 16 + 8;
-                if (!this.conditions.region.GetBoolean(centerX, centerZ)) {
-                    this.invalidChunks.add(new BlockPos(centerX, 0, centerZ));
+    @Override
+    public int getTunnelHeight(int[][] heightmap, Random rand, int x, int z, int chunkX, int chunkZ) {
+        final double value = this.map.GetNoise(x, z);
+        final double shifted = this.cfg.shift() + value;
+        final int cap = (int) (this.cfg.stretch()
+                * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
+        if (cap > 0) {
+            final int y = (int) this.offset.GetAdjustedNoise(x, z);
+            if (this.conditions.getColumn(x, z).contains(y)) {
+                if (this.conditions.noise.GetBoolean(x, y, z)) {
+                    return y;
                 }
             }
         }
+        return CANNOT_SPAWN;
     }
 
     @Override
@@ -93,6 +93,28 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
         this.decorateAll(this.caverns, ctx.localRand, ctx.world, ctx.primer, ctx.chunkX, ctx.chunkZ);
     }
 
+    private void fillInvalidChunks(BiomeSearch biomes) {
+        for (BiomeSearch.Data d : biomes.surrounding.get()) {
+            if (!(this.conditions.biomes.test(d.biome())
+                    && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
+                this.invalidChunks.add(new BlockPos(d.centerX(), 0, d.centerZ()));
+            }
+        }
+    }
+
+    private void fillInvalidChunks(int chunkX, int chunkZ) {
+        final int range = ConfigFile.biomeRange;
+        for (int cx = chunkX - range; cx <= chunkX + range; cx++) {
+            for (int cz = chunkZ - range; cz < chunkZ + range; cz++) {
+                final int centerX = cx * 16 + 8;
+                final int centerZ = cz * 16 + 8;
+                if (!this.conditions.region.GetBoolean(centerX, centerZ)) {
+                    this.invalidChunks.add(new BlockPos(centerX, 0, centerZ));
+                }
+            }
+        }
+    }
+
     private void generateShelled(PrimerContext ctx, GenerationFunction f) {
         for (int x = 0; x < 16; x++) {
             final int actualX = ctx.chunkX * 16 + x;
@@ -101,8 +123,10 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
                 final double distance = this.getNearestBorder(actualX, actualZ);
                 final double value = this.map.GetNoise(actualX, actualZ);
                 final double shifted = this.cfg.shift() + value;
-                final int cap = (int) (this.cfg.stretch() * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
-                final int shell = (int) (this.cfg.stretch() * (this.radiusShelled - (Math.pow(shifted, this.cfg.exponent()) * this.midShelled)));
+                final int cap = (int) (this.cfg.stretch()
+                        * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
+                final int shell = (int) (this.cfg.stretch()
+                        * (this.radiusShelled - (Math.pow(shifted, this.cfg.exponent()) * this.midShelled)));
 
                 if (cap > 0) {
                     final int centerY = (int) this.offset.GetAdjustedNoise(actualX, actualZ);
@@ -118,8 +142,7 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
                         final double curve = distance - this.getBiomeCurve(centerY - y);
                         if (curve > this.cfg.wallDistance()) {
                             f.generate(ctx, x, y, z);
-                        }
-                        else if (curve > this.cfg.wallDistance() - this.decorators.shell.radius) {
+                        } else if (curve > this.cfg.wallDistance() - this.decorators.shell.radius) {
                             this.generateShell(ctx.localRand, ctx.primer, x, y, z, centerY, ctx.chunkX, ctx.chunkZ);
                         }
                     }
@@ -151,7 +174,8 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
                 final double distance = this.getNearestBorder(actualX, actualZ);
                 final double value = this.map.GetNoise(actualX, actualZ);
                 final double shifted = this.cfg.shift() + value;
-                final int cap = (int) (this.cfg.stretch() * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
+                final int cap = (int) (this.cfg.stretch()
+                        * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
 
                 if (cap > 0) {
                     final int centerY = (int) this.offset.GetAdjustedNoise(actualX, actualZ);
@@ -199,25 +223,12 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
         this.caverns.forEach((x, y, z) -> this.decorateBlock(rand, primer, x, y, z, chunkX, chunkZ));
     }
 
-    @Override
-    public int getTunnelHeight(int[][] heightmap, Random rand, int x, int z, int chunkX, int chunkZ) {
-        final double value = this.map.GetNoise(x, z);
-        final double shifted = this.cfg.shift() + value;
-        final int cap = (int) (this.cfg.stretch() * (this.cfg.radius() - (Math.pow(shifted, this.cfg.exponent()) * this.mid)));
-        if (cap > 0) {
-            final int y = (int) this.offset.GetAdjustedNoise(x, z);
-            if (this.conditions.getColumn(x, z).contains(y)) {
-                if (this.conditions.noise.GetBoolean(x, y, z)) {
-                    return y;
-                }
-            }
-        }
-        return CANNOT_SPAWN;
-    }
-
     /** Experimental interface to reduce shell generation performance cost. Still testing. */
     @FunctionalInterface
     private interface GenerationFunction {
+
         void generate(PrimerContext ctx, int x, int y, int z);
+
     }
+
 }

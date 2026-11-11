@@ -3,49 +3,54 @@ package com.personthecat.cleancaves.data;
 import com.personthecat.cleancaves.config.CavePreset;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.HjsonMapper;
-import net.minecraft.block.state.IBlockState;
 import org.hjson.JsonObject;
 
-import javax.annotation.ParametersAreNonnullByDefault;
+import net.minecraft.block.state.IBlockState;
+
 import java.util.List;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 /** Large stalactites and stalagmites hanging from ceilings or rising from floors. */
 @ParametersAreNonnullByDefault
-public record StalactiteSettings(
-    ConditionSettings conditions,
-    IBlockState state,
-    Type type,
-    Size size,
-    double chance,
-    Range length,
-    int space,
-    boolean symmetrical,
-    List<IBlockState> matchers
-) {
+public record StalactiteSettings(ConditionSettings conditions,
+        IBlockState state,
+        Type type,
+        Size size,
+        double chance,
+        Range length,
+        int space,
+        boolean symmetrical,
+        List<IBlockState> matchers) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.stalactites;
+    private static final String FEATURE_NAME = CavePreset.Keys.STALACTITES;
 
     /** Default spawn conditions for all stalactite generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(11, 55)).build();
+            .height(Range.of(11, 55))
+            .build();
 
     /** The default noise settings to be optionally used for stalactites. */
     public static final NoiseRegionSettings DEFAULT_NOISE = NoiseRegionSettings.builder()
-        .frequency(0.025f).threshold(Range.of(-0.425F)).build();
+            .frequency(0.025f)
+            .threshold(Range.of(-0.425F))
+            .build();
 
     /** JSON key names. */
     public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String state = "state";
-        public static final String type = "type";
-        public static final String size = "size";
-        public static final String chance = "chance";
-        public static final String length = "length";
-        public static final String space = "space";
-        public static final String symmetrical = "symmetrical";
-        public static final String matchers = "matchers";
 
-        private Keys() {}
+        public static final String CONDITIONS = "conditions";
+        public static final String STATE = "state";
+        public static final String TYPE = "type";
+        public static final String SIZE = "size";
+        public static final String CHANCE = "chance";
+        public static final String LENGTH = "length";
+        public static final String SPACE = "space";
+        public static final String SYMMETRICAL = "symmetrical";
+        public static final String MATCHERS = "matchers";
+
+        private Keys() { }
+
     }
 
     public static Builder builder() {
@@ -63,32 +68,37 @@ public record StalactiteSettings(
 
     private static StalactiteSettings copyInto(JsonObject json, Builder builder) {
         return new HjsonMapper(json)
-            .mapRequiredState(Keys.state, FEATURE_NAME, builder::state)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, builder.conditions)))
-            .mapEnum(Keys.type, Type.class, builder::type)
-            .mapEnum(Keys.size, Size.class, builder::size)
-            .mapFloat(Keys.chance, builder::chance)
-            .mapRange(Keys.length, builder::length)
-            .mapInt(Keys.space, builder::space)
-            .mapBool(Keys.symmetrical, builder::symmetrical)
-            .mapStateList(Keys.matchers, builder::matchers)
-            .release(builder::build);
+                .mapRequiredState(Keys.STATE, FEATURE_NAME, builder::state)
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, builder.conditions)))
+                .mapEnum(Keys.TYPE, Type.class, builder::type)
+                .mapEnum(Keys.SIZE, Size.class, builder::size)
+                .mapFloat(Keys.CHANCE, builder::chance)
+                .mapRange(Keys.LENGTH, builder::length)
+                .mapInt(Keys.SPACE, builder::space)
+                .mapBool(Keys.SYMMETRICAL, builder::symmetrical)
+                .mapStateList(Keys.MATCHERS, builder::matchers)
+                .release(builder::build);
     }
 
     public enum Type {
+
         STALAGMITE,
         STALACTITE,
         SPELEOTHEM
+
     }
 
     public enum Size {
+
         SMALL,
         MEDIUM,
         LARGE,
         GIANT
+
     }
 
     public static final class Builder {
+
         ConditionSettings conditions = DEFAULT_CONDITIONS;
         /** Required -- {@code mapRequiredState} throws if the preset omits it. */
         private IBlockState state;
@@ -100,7 +110,7 @@ public record StalactiteSettings(
         private boolean symmetrical = true;
         private List<IBlockState> matchers = List.of();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -148,8 +158,10 @@ public record StalactiteSettings(
         }
 
         public StalactiteSettings build() {
-            return new StalactiteSettings(this.conditions, this.state, this.type, this.size,
-                this.chance, this.length, this.space, this.symmetrical, this.matchers);
+            return new StalactiteSettings(this.conditions, this.state, this.type, this.size, this.chance, this.length,
+                    this.space, this.symmetrical, this.matchers);
         }
+
     }
+
 }

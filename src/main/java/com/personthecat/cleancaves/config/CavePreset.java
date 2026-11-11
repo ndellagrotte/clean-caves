@@ -20,63 +20,65 @@ import java.util.List;
  *
  * @param raw the expanded source JSON, kept for diagnostics and for writing to {@code generated/}
  */
-public record CavePreset(
-    boolean enabled,
-    OverrideSettings overrides,
-    List<TunnelSettings> tunnels,
-    List<RavineSettings> ravines,
-    List<CavernSettings> caverns,
-    List<BurrowSettings> burrows,
-    List<LayerSettings> layers,
-    List<ClusterSettings> clusters,
-    List<StalactiteSettings> stalactites,
-    List<PillarSettings> pillars,
-    List<StructureSettings> structures,
-    JsonObject raw
-) {
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String enabled = "enabled";
-        public static final String overrides = "overrides";
-        public static final String tunnels = "tunnels";
-        public static final String ravines = "ravines";
-        public static final String caverns = "caverns";
-        public static final String burrows = "burrows";
-        public static final String layers = "layers";
-        public static final String clusters = "clusters";
-        public static final String stalactites = "stalactites";
-        public static final String pillars = "pillars";
-        public static final String structures = "structures";
-
-        private Keys() {}
-    }
+public record CavePreset(boolean enabled,
+        OverrideSettings overrides,
+        List<TunnelSettings> tunnels,
+        List<RavineSettings> ravines,
+        List<CavernSettings> caverns,
+        List<BurrowSettings> burrows,
+        List<LayerSettings> layers,
+        List<ClusterSettings> clusters,
+        List<StalactiteSettings> stalactites,
+        List<PillarSettings> pillars,
+        List<StructureSettings> structures,
+        JsonObject raw) {
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    public Builder toBuilder() {
-        return new Builder(this);
     }
 
     public static CavePreset from(JsonObject json) {
         final OverrideSettings overrides = OverrideSettings.from(json);
         final Builder builder = builder().overrides(overrides).raw(json);
         return new HjsonMapper(json)
-            .mapBool(Keys.enabled, builder::enabled)
-            .mapArray(Keys.tunnels, o -> TunnelSettings.from(o, overrides), builder::tunnels)
-            .mapArray(Keys.ravines, o -> RavineSettings.from(o, overrides), builder::ravines)
-            .mapArray(Keys.caverns, o -> CavernSettings.from(o, overrides), builder::caverns)
-            .mapArray(Keys.burrows, o -> BurrowSettings.from(o, overrides), builder::burrows)
-            .mapArray(Keys.layers, o -> LayerSettings.from(o, overrides), builder::layers)
-            .mapArray(Keys.clusters, o -> ClusterSettings.from(o, overrides), builder::clusters)
-            .mapArray(Keys.stalactites, o -> StalactiteSettings.from(o, overrides), builder::stalactites)
-            .mapArray(Keys.pillars, o -> PillarSettings.from(o, overrides), builder::pillars)
-            .mapArray(Keys.structures, o -> StructureSettings.from(o, overrides), builder::structures)
-            .release(builder::build);
+                .mapBool(Keys.ENABLED, builder::enabled)
+                .mapArray(Keys.TUNNELS, o -> TunnelSettings.from(o, overrides), builder::tunnels)
+                .mapArray(Keys.RAVINES, o -> RavineSettings.from(o, overrides), builder::ravines)
+                .mapArray(Keys.CAVERNS, o -> CavernSettings.from(o, overrides), builder::caverns)
+                .mapArray(Keys.BURROWS, o -> BurrowSettings.from(o, overrides), builder::burrows)
+                .mapArray(Keys.LAYERS, o -> LayerSettings.from(o, overrides), builder::layers)
+                .mapArray(Keys.CLUSTERS, o -> ClusterSettings.from(o, overrides), builder::clusters)
+                .mapArray(Keys.STALACTITES, o -> StalactiteSettings.from(o, overrides), builder::stalactites)
+                .mapArray(Keys.PILLARS, o -> PillarSettings.from(o, overrides), builder::pillars)
+                .mapArray(Keys.STRUCTURES, o -> StructureSettings.from(o, overrides), builder::structures)
+                .release(builder::build);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String ENABLED = "enabled";
+        public static final String OVERRIDES = "overrides";
+        public static final String TUNNELS = "tunnels";
+        public static final String RAVINES = "ravines";
+        public static final String CAVERNS = "caverns";
+        public static final String BURROWS = "burrows";
+        public static final String LAYERS = "layers";
+        public static final String CLUSTERS = "clusters";
+        public static final String STALACTITES = "stalactites";
+        public static final String PILLARS = "pillars";
+        public static final String STRUCTURES = "structures";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private boolean enabled = true;
         private OverrideSettings overrides = OverrideSettings.builder().build();
         private List<TunnelSettings> tunnels = List.of();
@@ -90,7 +92,7 @@ public record CavePreset(
         private List<StructureSettings> structures = List.of();
         private JsonObject raw;
 
-        private Builder() {}
+        private Builder() { }
 
         private Builder(CavePreset source) {
             this.enabled = source.enabled;
@@ -168,9 +170,10 @@ public record CavePreset(
         }
 
         public CavePreset build() {
-            return new CavePreset(this.enabled, this.overrides, this.tunnels, this.ravines,
-                this.caverns, this.burrows, this.layers, this.clusters, this.stalactites,
-                this.pillars, this.structures, this.raw);
+            return new CavePreset(this.enabled, this.overrides, this.tunnels, this.ravines, this.caverns, this.burrows,
+                    this.layers, this.clusters, this.stalactites, this.pillars, this.structures, this.raw);
         }
+
     }
+
 }

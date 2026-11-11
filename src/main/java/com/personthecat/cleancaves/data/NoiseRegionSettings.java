@@ -7,8 +7,9 @@ import com.personthecat.cleancaves.noise.DummyGenerator;
 import com.personthecat.cleancaves.util.HjsonMapper;
 import fastnoise.FastNoise;
 import fastnoise.FastNoise.NoiseType;
-import net.minecraft.world.World;
 import org.hjson.JsonObject;
+
+import net.minecraft.world.World;
 
 import java.util.Optional;
 
@@ -18,36 +19,17 @@ import java.util.Optional;
  * which is what lets {@link com.personthecat.cleancaves.config.PresetTester} tell users about
  * settings it will ignore.
  */
-public record NoiseRegionSettings(
-    Optional<Integer> seed,
-    FloatRange threshold,
-    float frequency,
-    boolean invert,
-    boolean cache,
-    boolean dummy,
-    float dummyOutput,
-    NoiseType type
-) {
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String seed = "seed";
-        public static final String threshold = "threshold";
-        public static final String frequency = "frequency";
-        public static final String invert = "invert";
-        public static final String cache = "cache";
-        public static final String dummy = "dummy";
-        public static final String dummyOutput = "dummyOutput";
-        public static final String type = "type";
-
-        private Keys() {}
-    }
+public record NoiseRegionSettings(Optional<Integer> seed,
+        FloatRange threshold,
+        float frequency,
+        boolean invert,
+        boolean cache,
+        boolean dummy,
+        float dummyOutput,
+        NoiseType type) {
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    public Builder toBuilder() {
-        return new Builder(this);
     }
 
     public static NoiseRegionSettings from(JsonObject json, NoiseRegionSettings defaults) {
@@ -60,14 +42,18 @@ public record NoiseRegionSettings(
 
     private static NoiseRegionSettings copyInto(JsonObject json, Builder builder) {
         return new HjsonMapper(json)
-            .mapInt(Keys.seed, i -> builder.seed(Optional.of(i)))
-            .mapFloat(Keys.frequency, builder::frequency)
-            .mapFloatRange(Keys.threshold, builder::threshold)
-            .mapBool(Keys.cache, builder::cache)
-            .mapBool(Keys.dummy, builder::dummy)
-            .mapFloat(Keys.dummyOutput, builder::dummyOutput)
-            .mapNoiseType(Keys.type, builder::type)
-            .release(builder::build);
+                .mapInt(Keys.SEED, i -> builder.seed(Optional.of(i)))
+                .mapFloat(Keys.FREQUENCY, builder::frequency)
+                .mapFloatRange(Keys.THRESHOLD, builder::threshold)
+                .mapBool(Keys.CACHE, builder::cache)
+                .mapBool(Keys.DUMMY, builder::dummy)
+                .mapFloat(Keys.DUMMY_OUTPUT, builder::dummyOutput)
+                .mapNoiseType(Keys.TYPE, builder::type)
+                .release(builder::build);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
     }
 
     public FastNoise getGenerator(World world) {
@@ -75,15 +61,32 @@ public record NoiseRegionSettings(
             return new DummyGenerator(this.dummyOutput);
         }
         final FastNoise noise = new FastNoise(NoiseSeeds.derive(world, this.seed))
-            .SetNoiseType(this.type)
-            .SetThreshold(this.threshold.min(), this.threshold.max())
-            .SetFrequency(this.frequency)
-            .SetInvert(this.invert)
-            .SetInterp(FastNoise.Interp.Hermite);
+                .SetNoiseType(this.type)
+                .SetThreshold(this.threshold.min(), this.threshold.max())
+                .SetFrequency(this.frequency)
+                .SetInvert(this.invert)
+                .SetInterp(FastNoise.Interp.Hermite);
         return this.cache ? new CachedNoiseGenerator(noise) : noise;
     }
 
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String SEED = "seed";
+        public static final String THRESHOLD = "threshold";
+        public static final String FREQUENCY = "frequency";
+        public static final String INVERT = "invert";
+        public static final String CACHE = "cache";
+        public static final String DUMMY = "dummy";
+        public static final String DUMMY_OUTPUT = "dummyOutput";
+        public static final String TYPE = "type";
+
+        private Keys() { }
+
+    }
+
     public static final class Builder {
+
         private Optional<Integer> seed = Optional.empty();
         private FloatRange threshold = Range.of(0.0F);
         private float frequency = 1.0f;
@@ -93,7 +96,7 @@ public record NoiseRegionSettings(
         private float dummyOutput = 1.0F;
         private NoiseType type = NoiseType.SimplexFractal;
 
-        private Builder() {}
+        private Builder() { }
 
         private Builder(NoiseRegionSettings source) {
             this.seed = source.seed;
@@ -147,8 +150,10 @@ public record NoiseRegionSettings(
         }
 
         public NoiseRegionSettings build() {
-            return new NoiseRegionSettings(this.seed, this.threshold, this.frequency, this.invert,
-                this.cache, this.dummy, this.dummyOutput, this.type);
+            return new NoiseRegionSettings(this.seed, this.threshold, this.frequency, this.invert, this.cache,
+                    this.dummy, this.dummyOutput, this.type);
         }
+
     }
+
 }

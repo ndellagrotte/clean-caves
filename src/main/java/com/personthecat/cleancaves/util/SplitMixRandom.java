@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.HashCommon;
  * The original design of this utility is documented here: http://xoshiro.di.unimi.it/
  */
 public class SplitMixRandom {
+
     private static final long PHI = 0x9E3779B97F4A7C15L;
 
     private long x;
@@ -64,4 +65,5 @@ public class SplitMixRandom {
     public void setState(final long state) {
         this.x = state;
     }
+
 }

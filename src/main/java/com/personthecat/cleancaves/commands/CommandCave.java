@@ -2,12 +2,24 @@ package com.personthecat.cleancaves.commands;
 
 import com.personthecat.cleancaves.CaveInit;
 import com.personthecat.cleancaves.CleanCaves;
-import com.personthecat.cleancaves.config.*;
+import com.personthecat.cleancaves.config.CavePreset;
+import com.personthecat.cleancaves.config.ImportHelper;
+import com.personthecat.cleancaves.config.PresetCombiner;
+import com.personthecat.cleancaves.config.PresetCompressor;
+import com.personthecat.cleancaves.config.PresetExpander;
+import com.personthecat.cleancaves.config.PresetReader;
+import com.personthecat.cleancaves.config.ReferenceHelper;
 import com.personthecat.cleancaves.noise.CachedNoiseHelper;
 import com.personthecat.cleancaves.util.Calculator;
 import com.personthecat.cleancaves.util.CaveLinter;
 import com.personthecat.cleancaves.util.HjsonTools;
 import com.personthecat.cleancaves.world.feature.StructureSpawner;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.hjson.JsonObject;
+import org.hjson.JsonValue;
+
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandManager;
 import net.minecraft.command.ICommandSender;
@@ -23,135 +35,127 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.event.ClickEvent;
 import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.GameType;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.hjson.JsonObject;
-import org.hjson.JsonValue;
 
-import javax.annotation.ParametersAreNonnullByDefault;
-import java.awt.*;
+import java.awt.Desktop;
+import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 import static com.personthecat.cleancaves.io.SafeFileIO.backup;
-import static com.personthecat.cleancaves.io.SafeFileIO.ensureDirExists;
-import static com.personthecat.cleancaves.io.SafeFileIO.rename;
 import static com.personthecat.cleancaves.io.SafeFileIO.copy;
+import static com.personthecat.cleancaves.io.SafeFileIO.ensureDirExists;
 import static com.personthecat.cleancaves.io.SafeFileIO.fileExists;
 import static com.personthecat.cleancaves.io.SafeFileIO.listFiles;
+import static com.personthecat.cleancaves.io.SafeFileIO.rename;
 import static com.personthecat.cleancaves.util.CommonMethods.extension;
 import static com.personthecat.cleancaves.util.CommonMethods.f;
 import static com.personthecat.cleancaves.util.CommonMethods.noExtension;
 import static com.personthecat.cleancaves.util.CommonMethods.runEx;
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
-import static com.personthecat.cleancaves.util.HjsonTools.getBool;
 import static com.personthecat.cleancaves.util.HjsonTools.FORMATTER;
+import static com.personthecat.cleancaves.util.HjsonTools.getBool;
 import static com.personthecat.cleancaves.util.HjsonTools.writeJson;
 
 @ParametersAreNonnullByDefault
 public class CommandCave extends CommandBase {
 
     /** A tooltip for the enable button. */
-    private static final HoverEvent ENABLE_BUTTON_HOVER =
-        new HoverEvent(HoverEvent.Action.SHOW_TEXT, tcs("Enable this preset."));
+    private static final HoverEvent ENABLE_BUTTON_HOVER = new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+            tcs("Enable this preset."));
 
     /** A tooltip for the disable button. */
-    private static final HoverEvent DISABLE_BUTTON_HOVER =
-        new HoverEvent(HoverEvent.Action.SHOW_TEXT, tcs("Disable this preset."));
+    private static final HoverEvent DISABLE_BUTTON_HOVER = new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+            tcs("Disable this preset."));
 
-    private static final HoverEvent EXPLORE_BUTTON_HOVER =
-        new HoverEvent(HoverEvent.Action.SHOW_TEXT, tcs("Explore this directory."));
+    private static final HoverEvent EXPLORE_BUTTON_HOVER = new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+            tcs("Explore this directory."));
 
     /** A tooltip for the view button. */
-    private static final HoverEvent VIEW_BUTTON_HOVER =
-        new HoverEvent(HoverEvent.Action.SHOW_TEXT, tcs("Open preset directory."));
+    private static final HoverEvent VIEW_BUTTON_HOVER = new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+            tcs("Open preset directory."));
 
     /** The action to be performed by the view button when clicked. */
-    private static final ClickEvent VIEW_BUTTON_CLICK =
-        clickToOpen(CaveInit.presetDir().toString());
+    private static final ClickEvent VIEW_BUTTON_CLICK = clickToOpen(CaveInit.presetDir().toString());
 
     /** The text formatting to be used for the enable button. */
     private static final Style ENABLE_BUTTON_STYLE = new Style()
-        .setColor(TextFormatting.GREEN)
-        .setHoverEvent(ENABLE_BUTTON_HOVER);
+            .setColor(TextFormatting.GREEN)
+            .setHoverEvent(ENABLE_BUTTON_HOVER);
 
     /** The text formatting to be used for this disable button. */
     private static final Style DISABLE_BUTTON_STYLE = new Style()
-        .setColor(TextFormatting.RED)
-        .setHoverEvent(DISABLE_BUTTON_HOVER);
+            .setColor(TextFormatting.RED)
+            .setHoverEvent(DISABLE_BUTTON_HOVER);
 
-    private static final Style ENABLED_INDICATOR_STYLE = new Style()
-        .setColor(TextFormatting.GREEN);
+    private static final Style ENABLED_INDICATOR_STYLE = new Style().setColor(TextFormatting.GREEN);
 
-    private static final Style DISABLED_INDICATOR_STYLE = new Style()
-        .setColor(TextFormatting.RED);
+    private static final Style DISABLED_INDICATOR_STYLE = new Style().setColor(TextFormatting.RED);
 
     private static final Style EXPLORE_BUTTON_STYLE = new Style()
-        .setColor(TextFormatting.GRAY)
-        .setHoverEvent(EXPLORE_BUTTON_HOVER);
+            .setColor(TextFormatting.GRAY)
+            .setHoverEvent(EXPLORE_BUTTON_HOVER);
 
     /** The text formatting to be used for the view button. */
     private static final Style VIEW_BUTTON_STYLE = new Style()
-        .setColor(TextFormatting.GRAY)
-        .setUnderlined(true)
-        .setBold(true)
-        .setHoverEvent(VIEW_BUTTON_HOVER)
-        .setClickEvent(VIEW_BUTTON_CLICK);
+            .setColor(TextFormatting.GRAY)
+            .setUnderlined(true)
+            .setBold(true)
+            .setHoverEvent(VIEW_BUTTON_HOVER)
+            .setClickEvent(VIEW_BUTTON_CLICK);
 
     /** The text formatting to be used for the command usage header. */
-    private static final Style USAGE_HEADER_STYLE = new Style()
-        .setColor(TextFormatting.GREEN)
-        .setBold(true);
+    private static final Style USAGE_HEADER_STYLE = new Style().setColor(TextFormatting.GREEN).setBold(true);
 
     /** The text formatting to be used for displaying command usage. */
-    private static final Style USAGE_STYLE = new Style()
-        .setColor(TextFormatting.GRAY);
+    private static final Style USAGE_STYLE = new Style().setColor(TextFormatting.GRAY);
 
-    private static final Style ERROR_STYLE = new Style()
-        .setColor(TextFormatting.RED);
+    private static final Style ERROR_STYLE = new Style().setColor(TextFormatting.RED);
 
     /** The button used for opening the preset directory. */
-    private static final ITextComponent VIEW_BUTTON = tcs("\n --- [OPEN PRESET DIRECTORY] ---")
-        .setStyle(VIEW_BUTTON_STYLE);
+    private static final ITextComponent VIEW_BUTTON = tcs("\n --- [OPEN PRESET DIRECTORY] ---").setStyle(VIEW_BUTTON_STYLE);
 
     /** The actual text to be used by the help messages. */
     private static final String[][] USAGE_TEXT = {
-        { "reload", "Reloads the current presets from the the", "disk." },
-        { "list [<dir>]", "Displays a list of all presets, with buttons", "for enabling / disabling." },
-        { "test", "Applies night vision and gamemode 3 for easy", "cave viewing." },
-        { "untest", "Removes night vision and puts you in gamemode 1." },
-        { "jump [<k>]", "Teleports the player 1,000 * k blocks in each", "direction."},
-        { "display <name> [<dir>]", "Displays a linted preset in the chat." },
-        { "open [<name>] [<dir>]", "Opens a preset in your default text editor."},
-        { "ch [<scale|max>]", "Allows you to expand your chat height", "beyond the default limit of 1.0." },
-        { "cw [<scale|max>]", "Allows you to expand your chat width", "beyond the default limit of 1.0." },
-        { "combine <preset.path> <preset>", "Copies the first", "path into the second preset." },
-        { "enable <name> [<dir>]", "Enables the preset with name <name>." },
-        { "disable <name> [<dir>]", "Disables the preset with name <name>." },
-        { "new <name>", "Generates a new preset file with name", "<name>." },
-        { "copy <name> [<dir>]", "Recursively copies presets out of", "config/cleancaves." },
-        { "move <name> <dir>", "Moves a preset out of the preset", "directory." },
-        { "delete <name> [<dir>]", "Moves a preset to the backup directory." },
-        { "clean [<dir>]", "Moves disabled presets to the backup directory."},
-        { "rename <name> <new>", "Renames a preset, ignoring its extension." },
-        { "expand <name> [<as>]", "Writes the expanded copy of this preset", "under /generated." },
-        { "compress <name> [<as>]", "Writes a compressed version of this", "preset under /generated." },
-        { "define <JSON>", "Defines a JSON member as a variable in memory." },
-        { "import <file>", "Imports variables from a file into memory." },
-        { "eval <exp>", "Evaluates a JSON, cave, or arithmetic expression." },
-        { "print [<key>] [<key2>] [...]", "Prints JSON values and comments to the chat." },
-        { "dir", "Displays all of the variables in memory." },
-        { "save <filename> [<dir>]", "Saves the in memory-definitions to a file."},
-        { "clear", "Clears the in-memory definitions."},
-        { "tojson <name>", "Backs up and converts the specified", "file from hjson to standard JSON." },
-        { "tohjson <name>", "Backs up and converts the specified", "file from standard JSON to hjson." },
+            { "reload", "Reloads the current presets from the the", "disk." },
+            { "list [<dir>]", "Displays a list of all presets, with buttons", "for enabling / disabling." },
+            { "test", "Applies night vision and gamemode 3 for easy", "cave viewing." },
+            { "untest", "Removes night vision and puts you in gamemode 1." },
+            { "jump [<k>]", "Teleports the player 1,000 * k blocks in each", "direction." },
+            { "display <name> [<dir>]", "Displays a linted preset in the chat." },
+            { "open [<name>] [<dir>]", "Opens a preset in your default text editor." },
+            { "ch [<scale|max>]", "Allows you to expand your chat height", "beyond the default limit of 1.0." },
+            { "cw [<scale|max>]", "Allows you to expand your chat width", "beyond the default limit of 1.0." },
+            { "combine <preset.path> <preset>", "Copies the first", "path into the second preset." },
+            { "enable <name> [<dir>]", "Enables the preset with name <name>." },
+            { "disable <name> [<dir>]", "Disables the preset with name <name>." },
+            { "new <name>", "Generates a new preset file with name", "<name>." },
+            { "copy <name> [<dir>]", "Recursively copies presets out of", "config/cleancaves." },
+            { "move <name> <dir>", "Moves a preset out of the preset", "directory." },
+            { "delete <name> [<dir>]", "Moves a preset to the backup directory." },
+            { "clean [<dir>]", "Moves disabled presets to the backup directory." },
+            { "rename <name> <new>", "Renames a preset, ignoring its extension." },
+            { "expand <name> [<as>]", "Writes the expanded copy of this preset", "under /generated." },
+            { "compress <name> [<as>]", "Writes a compressed version of this", "preset under /generated." },
+            { "define <JSON>", "Defines a JSON member as a variable in memory." },
+            { "import <file>", "Imports variables from a file into memory." },
+            { "eval <exp>", "Evaluates a JSON, cave, or arithmetic expression." },
+            { "print [<key>] [<key2>] [...]", "Prints JSON values and comments to the chat." },
+            { "dir", "Displays all of the variables in memory." },
+            { "save <filename> [<dir>]", "Saves the in memory-definitions to a file." },
+            { "clear", "Clears the in-memory definitions." },
+            { "tojson <name>", "Backs up and converts the specified", "file from hjson to standard JSON." },
+            { "tohjson <name>", "Backs up and converts the specified", "file from standard JSON to hjson." },
     };
 
     /** The number of lines to occupy each page of the help message. */
@@ -165,82 +169,6 @@ public class CommandCave extends CommandBase {
 
     /** Working memory for command evaluations. */
     private final JsonObject memory = new JsonObject();
-
-    @Override
-    public String getName() {
-        return "cave";
-    }
-
-    @Override
-    public String getUsage(ICommandSender sender) {
-        return "/cave <subcommand>";
-    }
-
-    @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) {
-        // The user did not specify which command to run. Inform them and stop.
-        if (args.length == 0) {
-            displayHelp(sender, 1);
-            return;
-        }
-        // Allow multiple commands to be separated by `&&`.
-        final int splitIndex = ArrayUtils.lastIndexOf(args, "&&");
-        if (splitIndex > 0 && args.length > splitIndex) {
-            // Split the arguments into multiple arrays.
-            final String[] runFirst = ArrayUtils.subarray(args, 0, splitIndex);
-            args = ArrayUtils.subarray(args, splitIndex + 1, args.length);
-            // Execute the first half of the arguments and then continue with the rest.
-            this.execute(server, sender, runFirst);
-        }
-        try { // Process, forwarding errors to the user.
-            final String[] slice = ArrayUtils.subarray(args, 1, args.length);
-            this.handle(server, sender, args[0], slice);
-        } catch (RuntimeException e) {
-            sendError(sender, e.getMessage());
-            if (e.getCause() != null) {
-                sendError(sender, f("Cause: {}", e.getCause().getMessage()));
-            }
-        }
-    }
-
-    private void handle(MinecraftServer server, ICommandSender sender, String command, String[] args) {
-        switch (command) {
-            case "reload" : reload(server, sender); break;
-            case "list" : list(sender, args); break;
-            case "listRaw" : listRaw(sender, args); break;
-            case "test" : test(sender); break;
-            case "untest": untest(sender); break;
-            case "jump" : jump(server, sender, args); break;
-            case "display" : display(sender, args); break;
-            case "open" : open(sender, args); break;
-            case "ch" : chatHeight(server, sender, args); break;
-            case "cw" : chatWidth(server, sender, args); break;
-            case "combine" : combine(sender, args); break;
-            case "enable" : enbableOrDisable(sender, args, true); break;
-            case "disable" : enbableOrDisable(sender, args, false); break;
-            case "new" : newPreset(sender, args); break;
-            case "copy": copyPreset(sender, args); break;
-            case "move": movePreset(sender, args); break;
-            case "delete": deletePreset(sender, args); break;
-            case "clean": cleanPresets(sender, args); break;
-            case "rename": renamePreset(sender, args); break;
-            case "expand" : writeExpanded(sender, args); break;
-            case "compress" : writeCompressed(sender, args); break;
-            case "set" :
-            case "define" : this.define(sender, args); break;
-            case "import" : this.importPreset(sender, args); break;
-            case "eval" : this.evaluate(sender, args); break;
-            case "print" : this.print(sender, args); break;
-            case "dir" : this.displayMemory(sender); break;
-            case "save" : this.saveMemory(sender, args); break;
-            case "clear" : this.clearMemory(sender); break;
-            case "tojson" : convert(sender, args, true); break;
-            case "tohjson" : convert(sender, args, false); break;
-            case "page" :
-            case "help" : helpCommand(sender, args); break;
-            default : helpCommand(sender, command);
-        }
-    }
 
     /** Sends the formatted command usage to the user. */
     private static void displayHelp(ICommandSender sender, int page) {
@@ -294,7 +222,7 @@ public class CommandCave extends CommandBase {
         if (args.length > 0) {
             distance *= Float.parseFloat(args[0]);
         }
-        mgr.executeCommand(sender,  f("/tp ~{} ~ ~{}", distance, distance));
+        mgr.executeCommand(sender, f("/tp ~{} ~ ~{}", distance, distance));
     }
 
     private static void display(ICommandSender sender, String[] args) {
@@ -346,16 +274,14 @@ public class CommandCave extends CommandBase {
         requireArgs(args, 1);
         final Path located = locateFile(args);
         final Path dir = located.getParent();
-        final String key = CavePreset.Keys.enabled;
+        final String key = CavePreset.Keys.ENABLED;
         PresetReader.getPresetJson(located).ifPresent(cave -> {
             if (cave.has(key)) {
                 cave.set(key, enabled);
             } else {
                 cave.add(key, enabled, "Whether the preset is enabled globally.");
             }
-            final Path f = enabled && dir != CaveInit.presetDir()
-                ? CaveInit.presetDir().resolve(located.getFileName())
-                : located;
+            final Path f = enabled && dir != CaveInit.presetDir() ? CaveInit.presetDir().resolve(located.getFileName()) : located;
             // Try to write the updated preset to the disk.
             writeJson(cave, f).expectF("Error writing to {}", f.getFileName().toString());
         });
@@ -376,8 +302,8 @@ public class CommandCave extends CommandBase {
         requireArgs(args, 1);
         final Path dir = Paths.get(args[0]);
         ITextComponent msg = tcs("") // Parent has no formatting.
-            .appendSibling(VIEW_BUTTON.createCopy())
-            .appendSibling(tcs("\n"));
+                .appendSibling(VIEW_BUTTON.createCopy())
+                .appendSibling(tcs("\n"));
 
         final List<Path> directories = new ArrayList<>();
         final List<Path> enabled = new ArrayList<>();
@@ -405,8 +331,7 @@ public class CommandCave extends CommandBase {
             sendMessage(sender, "This preset already exists.");
             return;
         }
-        final JsonObject preset = new JsonObject()
-            .add("enabled", true);
+        final JsonObject preset = new JsonObject().add("enabled", true);
         writeJson(preset, presetFile);
         sendMessage(sender, "Finished writing a new preset file.");
     }
@@ -448,7 +373,8 @@ public class CommandCave extends CommandBase {
             } catch (final IOException e) {
                 sendError(sender, "Original could not be deleted.");
             }
-            sendMessage(sender, f("The file was moved to {}/{}", dir.getFileName().toString(), f.getFileName().toString()));
+            sendMessage(sender,
+                    f("The file was moved to {}/{}", dir.getFileName().toString(), f.getFileName().toString()));
         } else {
             sendError(sender, "File not found.");
         }
@@ -463,9 +389,7 @@ public class CommandCave extends CommandBase {
     }
 
     private static void cleanPresets(ICommandSender sender, String[] args) {
-        final Path dir = args.length > 0
-            ? CaveInit.caveDir().resolve(args[0])
-            : CaveInit.presetDir();
+        final Path dir = args.length > 0 ? CaveInit.caveDir().resolve(args[0]) : CaveInit.presetDir();
         if (!Files.exists(dir)) {
             displayDirectories(sender);
         } else if (dir.equals(CaveInit.backupDir())) {
@@ -531,12 +455,9 @@ public class CommandCave extends CommandBase {
         final String presetName = noExtension(args[0]);
         // No need to reparse this file. It's in memory.
         final CavePreset settings = Optional.ofNullable(CleanCaves.instance.presets.get(presetName))
-            .orElseThrow(() -> runExF("Unable to find preset: {}", args[0]));
-        final String newName = args.length > 1
-            ? noExtension(args[1])
-            : presetName;
-        ensureDirExists(CaveInit.generatedDir())
-            .expect("Error creating /generated directory.");
+                .orElseThrow(() -> runExF("Unable to find preset: {}", args[0]));
+        final String newName = args.length > 1 ? noExtension(args[1]) : presetName;
+        ensureDirExists(CaveInit.generatedDir()).expect("Error creating /generated directory.");
         final Path expanded = CaveInit.generatedDir().resolve(newName + ".cave");
         writeJson(settings.raw(), expanded);
         sendMessage(sender, "Finished writing expanded preset file.");
@@ -544,18 +465,15 @@ public class CommandCave extends CommandBase {
 
     /** Writes a compressed, regular JSON version of this preset. */
     private static void writeCompressed(ICommandSender sender, String[] args) {
-        requireArgs(args,1);
+        requireArgs(args, 1);
         final String presetName = noExtension(args[0]);
         // Read the actual preset so that it may be expanded or not.
         final Path preset = CaveInit.locatePreset(presetName)
-            .orElseThrow(() -> runExF("Unable to find preset: {}", args[0]));
-        final String newName = args.length > 1
-            ? noExtension(args[1])
-            : presetName;
+                .orElseThrow(() -> runExF("Unable to find preset: {}", args[0]));
+        final String newName = args.length > 1 ? noExtension(args[1]) : presetName;
         final JsonObject original = PresetReader.getPresetJson(preset)
-            .orElseThrow(() -> runExF("Error reading {}", presetName));
-        ensureDirExists(CaveInit.generatedDir())
-            .expect("Error creating /generated directory.");
+                .orElseThrow(() -> runExF("Error reading {}", presetName));
+        ensureDirExists(CaveInit.generatedDir()).expect("Error creating /generated directory.");
         final Path compressed = CaveInit.generatedDir().resolve(newName + ".json");
         // Manually write JSON
         try (Writer writer = Files.newBufferedWriter(compressed, StandardCharsets.UTF_8)) {
@@ -567,11 +485,305 @@ public class CommandCave extends CommandBase {
         }
     }
 
+    /** Converts the specified file to and from JSON or Hjson. */
+    private static void convert(ICommandSender sender, String[] args, boolean toJson) {
+        requireArgs(args, 1);
+        final Optional<Path> preset = CaveInit.locatePreset(args[0]);
+        if (!preset.isPresent()) {
+            sendError(sender, "No preset found named " + args[0]);
+            return;
+        }
+        final Path presetFile = preset.get();
+        if (toJson == extension(presetFile).equals("json")) {
+            sendError(sender, "Preset is already in the desired format.");
+            return;
+        }
+        final Optional<JsonObject> json = PresetReader.getPresetJson(presetFile);
+        if (!json.isPresent()) {
+            sendError(sender, "The file could not be parsed.");
+            return;
+        }
+        final String extension = toJson ? ".json" : ".cave";
+        final Path newPreset = CaveInit.presetDir().resolve(noExtension(presetFile) + extension);
+        // The output file's extension determines the format.
+        writeJson(json.get(), newPreset);
+        backup(presetFile);
+        try {
+            Files.delete(presetFile);
+            sendMessage(sender, "Converted successfully. The original was moved to the backup directory.");
+        } catch (final IOException e) {
+            sendMessage(sender, "Converted successfully. The original could not be deleted.");
+        }
+    }
+
+    /** The standard help command, specifying the page number. */
+    private static void helpCommand(ICommandSender sender, String... args) {
+        requireArgs(args, 1);
+        final String arg = args[0];
+        final int page = StringUtils.isNumeric(arg) ? Integer.parseInt(arg) : 1;
+        displayHelp(sender, page);
+    }
+
+    private static ITextComponent getListElementText(Path file, boolean enabled) {
+        final String dir = getRelativeDir(file.getParent());
+        final String filename = noExtension(file);
+        final Style openButton = new Style()
+                .setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        tcs("Open " + file.getFileName().toString() + ".")))
+                .setClickEvent(clickToOpen(file.toString()));
+        if (enabled) {
+            return tcs("\n")
+                    .appendSibling(tcs(" + ").setStyle(ENABLED_INDICATOR_STYLE))
+                    .appendSibling(tcs(filename + " ").setStyle(openButton))
+                    .appendSibling(disableButton(filename, dir));
+        } else {
+            return tcs("\n")
+                    .appendSibling(tcs(" - ").setStyle(DISABLED_INDICATOR_STYLE))
+                    .appendSibling(tcs(filename + " ").setStyle(openButton))
+                    .appendSibling(enableButton(filename, dir));
+        }
+    }
+
+    private static ITextComponent getViewDirectoryText(Path file) {
+        return tcs("\n / " + file.getFileName().toString() + " ").appendSibling(viewButton(file.toString()));
+    }
+
+    private static String getRelativeDir(Path file) {
+        final String path = file.toString();
+        final String cgPath = CaveInit.caveDir().toString();
+        return path.substring(cgPath.length());
+    }
+
+    /** Determines whether the input file points to a preset that is enabled. */
+    private static boolean isPresetEnabled(Path file) {
+        return PresetReader.getPresetJson(file).flatMap(preset -> getBool(preset, "enabled")).orElse(true);
+    }
+
+    private static Path locateFile(String[] args) {
+        if (args.length > 1) {
+            final Path dir = CaveInit.caveDir().resolve(args[1]);
+            final Optional<Path> located = CaveInit.locatePreset(dir, args[0]);
+            return located.orElseThrow(() -> runEx("File not found."));
+        } else {
+            final Optional<Path> located = CaveInit.locatePreset(CaveInit.presetDir(), args[0]);
+            return located.orElseGet(() -> locateRecursively(CaveInit.caveDir(),
+                    args[0]).orElseThrow(() -> runEx("File not found.")));
+        }
+    }
+
+    /** Recursively locates a valid cave preset inside of the mod directory. */
+    private static Optional<Path> locateRecursively(Path dir, String name) {
+        for (Path f : listFiles(dir).orElse(List.of())) {
+            if (Files.isDirectory(f)) {
+                final Optional<Path> inDir = locateRecursively(f, name);
+                if (inDir.isPresent()) {
+                    return inDir;
+                }
+            } else if (CaveInit.validExtension(f) && noExtension(f).equals(name)) {
+                return Optional.of(f);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Generates the help message, displaying usage for each sub-command. */
+    private static ITextComponent[] createHelpMessage() {
+        final List<TextComponentString> msgs = new ArrayList<>();
+        final int numLines = getNumElements(USAGE_TEXT) - USAGE_TEXT.length;
+        final int numPages = numLines / USAGE_LENGTH - 1;
+        // The actual pages..
+        for (int i = 0; i < USAGE_TEXT.length; i += USAGE_LENGTH) {
+            final TextComponentString header = getUsageHeader((i / USAGE_LENGTH) + 1, numPages);
+            // The elements on each page.
+            for (int j = i; j < i + USAGE_LENGTH && j < USAGE_TEXT.length; j++) {
+                final String[] full = USAGE_TEXT[j];
+                // Append the required elements.
+                header.appendText("\n");
+                appendUsageText(header, full[0], full[1]);
+                // Append any extra lines below.
+                for (int k = 2; k < full.length; k++) {
+                    header.appendSibling(tcs("\n " + full[k]).setStyle(USAGE_STYLE));
+                }
+            }
+            msgs.add(header);
+        }
+        return msgs.toArray(new TextComponentString[0]);
+    }
+
+    private static int getNumElements(String[][] matrix) {
+        int numElements = 0;
+        for (String[] array : matrix) {
+            numElements += array.length;
+        }
+        return numElements;
+    }
+
+    private static TextComponentString getUsageHeader(int page, int max) {
+        final String header = USAGE_HEADER.replace("X", String.valueOf(page)).replace("Y", String.valueOf(max));
+        TextComponentString full = tcs("");
+        TextComponentString headerTCS = tcs(header);
+        headerTCS.setStyle(USAGE_HEADER_STYLE);
+        full.appendSibling(headerTCS);
+        return full;
+    }
+
+    /** A slightly neater way to append so many components to the help message. */
+    private static void appendUsageText(ITextComponent msg, String command, String usage) {
+        msg.appendSibling(usageText(command, usage));
+    }
+
+    /** Formats the input text to nicely display a command's usage. */
+    private static ITextComponent usageText(String command, String usage) {
+        ITextComponent msg = tcs(""); // Parent has no formatting.
+        msg.appendSibling(tcs(command));
+        msg.appendSibling(tcs(" :\n " + usage).setStyle(USAGE_STYLE));
+        return msg;
+    }
+
+    /** Creates a new enable button. */
+    private static ITextComponent enableButton(String fileName, String dir) {
+        final Style style = ENABLE_BUTTON_STYLE
+                .createDeepCopy()
+                .setClickEvent(clickToRun("/cave enable " + fileName + " " + dir + " && reload && list"));
+        return tcs("[ENABLE]").setStyle(style);
+    }
+
+    /** Creates a new enable button. */
+    private static ITextComponent disableButton(String fileName, String dir) {
+        final Style style = DISABLE_BUTTON_STYLE
+                .createDeepCopy()
+                .setClickEvent(clickToRun("/cave disable " + fileName + " " + dir + " && reload && list"));
+        return tcs("[DISABLE]").setStyle(style);
+    }
+
+    private static ITextComponent viewButton(String dir) {
+        final Style style = EXPLORE_BUTTON_STYLE.createDeepCopy().setClickEvent(clickToRun("/cave listRaw " + dir));
+        return tcs("[VIEW]").setStyle(style);
+    }
+
+    /** A ClickEvent constructor for running commands. */
+    private static ClickEvent clickToRun(String command) {
+        return new ClickEvent(ClickEvent.Action.RUN_COMMAND, command);
+    }
+
+    /** A ClickEvent constructor for opening files. */
+    private static ClickEvent clickToOpen(String path) {
+        return new ClickEvent(ClickEvent.Action.OPEN_FILE, path);
+    }
+
+    private static void displayDirectories(ICommandSender user) {
+        final List<String> names = new ArrayList<>();
+        for (Path f : listFiles(CaveInit.caveDir(), Files::isDirectory).orElse(List.of())) {
+            names.add(f.getFileName().toString());
+        }
+        final String options = Arrays.toString(names.toArray(new String[0]));
+        sendError(user, f("Invalid directory. Options: {}", options));
+    }
+
+    /** Shorthand for sending a message to the input user. */
+    private static void sendMessage(ICommandSender user, String msg) {
+        user.sendMessage(tcs(msg));
+    }
+
+    private static void sendError(ICommandSender user, String msg) {
+        user.sendMessage(tcs(msg).setStyle(ERROR_STYLE));
+    }
+
+    /** Shorthand method for creating TextComponentStrings. */
+    private static TextComponentString tcs(String s) {
+        return new TextComponentString(s);
+    }
+
+    private static PotionEffect getNightVision() {
+        final Potion potion = Potion.getPotionFromResourceLocation("night_vision");
+        Objects.requireNonNull(potion, "Build error: invalid potion ID.");
+        return new PotionEffect(potion, Integer.MAX_VALUE, 0, true, false);
+    }
+
+    /** Ensures that at least `num` arguments are present. */
+    private static void requireArgs(String[] args, int num) {
+        if (args.length < num) {
+            throw runEx("Insufficient arguments for this command.");
+        }
+    }
+
+    @Override
+    public String getName() {
+        return "cave";
+    }
+
+    @Override
+    public String getUsage(ICommandSender sender) {
+        return "/cave <subcommand>";
+    }
+
+    @Override
+    public void execute(MinecraftServer server, ICommandSender sender, String[] args) {
+        // The user did not specify which command to run. Inform them and stop.
+        if (args.length == 0) {
+            displayHelp(sender, 1);
+            return;
+        }
+        // Allow multiple commands to be separated by `&&`.
+        final int splitIndex = ArrayUtils.lastIndexOf(args, "&&");
+        if (splitIndex > 0 && args.length > splitIndex) {
+            // Split the arguments into multiple arrays.
+            final String[] runFirst = ArrayUtils.subarray(args, 0, splitIndex);
+            args = ArrayUtils.subarray(args, splitIndex + 1, args.length);
+            // Execute the first half of the arguments and then continue with the rest.
+            this.execute(server, sender, runFirst);
+        }
+        try { // Process, forwarding errors to the user.
+            final String[] slice = ArrayUtils.subarray(args, 1, args.length);
+            this.handle(server, sender, args[0], slice);
+        } catch (RuntimeException e) {
+            sendError(sender, e.getMessage());
+            if (e.getCause() != null) {
+                sendError(sender, f("Cause: {}", e.getCause().getMessage()));
+            }
+        }
+    }
+
+    private void handle(MinecraftServer server, ICommandSender sender, String command, String[] args) {
+        switch (command) {
+            case "reload" -> reload(server, sender);
+            case "list" -> list(sender, args);
+            case "listRaw" -> listRaw(sender, args);
+            case "test" -> test(sender);
+            case "untest" -> untest(sender);
+            case "jump" -> jump(server, sender, args);
+            case "display" -> display(sender, args);
+            case "open" -> open(sender, args);
+            case "ch" -> chatHeight(server, sender, args);
+            case "cw" -> chatWidth(server, sender, args);
+            case "combine" -> combine(sender, args);
+            case "enable" -> enbableOrDisable(sender, args, true);
+            case "disable" -> enbableOrDisable(sender, args, false);
+            case "new" -> newPreset(sender, args);
+            case "copy" -> copyPreset(sender, args);
+            case "move" -> movePreset(sender, args);
+            case "delete" -> deletePreset(sender, args);
+            case "clean" -> cleanPresets(sender, args);
+            case "rename" -> renamePreset(sender, args);
+            case "expand" -> writeExpanded(sender, args);
+            case "compress" -> writeCompressed(sender, args);
+            case "set", "define" -> this.define(sender, args);
+            case "import" -> this.importPreset(sender, args);
+            case "eval" -> this.evaluate(sender, args);
+            case "print" -> this.print(sender, args);
+            case "dir" -> this.displayMemory(sender);
+            case "save" -> this.saveMemory(sender, args);
+            case "clear" -> this.clearMemory(sender);
+            case "tojson" -> convert(sender, args, true);
+            case "tohjson" -> convert(sender, args, false);
+            case "page", "help" -> helpCommand(sender, args);
+            default -> helpCommand(sender, command);
+        }
+    }
+
     private void define(ICommandSender sender, String[] args) {
         requireArgs(args, 1);
-        final String exp = String.join(" ", args)
-            .replace("\\n", "\n")
-            .replace("\\\\", "\\");
+        final String exp = String.join(" ", args).replace("\\n", "\n").replace("\\\\", "\\");
         final JsonValue value = JsonObject.readHjson(exp, FORMATTER);
         if (!value.isObject()) {
             sendMessage(sender, "Missing key.");
@@ -607,8 +819,8 @@ public class CommandCave extends CommandBase {
     private void expandFauxPreset(JsonObject data, String exp) {
         // Generate a faux preset containing these data.
         final JsonObject fauxPreset = new JsonObject()
-            .add(PresetExpander.IMPORTS, exp)
-            .add(PresetExpander.VARIABLES, data);
+                .add(PresetExpander.IMPORTS, exp)
+                .add(PresetExpander.VARIABLES, data);
         // Generate fake maps containing only this preset
         // and the required definitions.
         final Map<Path, JsonObject> presets = new HashMap<>();
@@ -630,7 +842,7 @@ public class CommandCave extends CommandBase {
             return;
         }
         final JsonValue result = ReferenceHelper.trySubstitute(this.memory, exp)
-            .orElseGet(() -> JsonObject.readHjson(exp));
+                .orElseGet(() -> JsonObject.readHjson(exp));
         sendCalculated(sender, result);
     }
 
@@ -712,234 +924,4 @@ public class CommandCave extends CommandBase {
         sendMessage(sender, "JSON data were cleared from memory.");
     }
 
-    /** Converts the specified file to and from JSON or Hjson. */
-    private static void convert(ICommandSender sender, String[] args, boolean toJson) {
-        requireArgs(args, 1);
-        final Optional<Path> preset = CaveInit.locatePreset(args[0]);
-        if (!preset.isPresent()) {
-            sendError(sender, "No preset found named " + args[0]);
-            return;
-        }
-        final Path presetFile = preset.get();
-        if (toJson == extension(presetFile).equals("json")) {
-            sendError(sender, "Preset is already in the desired format.");
-            return;
-        }
-        final Optional<JsonObject> json = PresetReader.getPresetJson(presetFile);
-        if (!json.isPresent()) {
-            sendError(sender, "The file could not be parsed.");
-            return;
-        }
-        final String extension = toJson ? ".json" : ".cave";
-        final Path newPreset = CaveInit.presetDir().resolve(noExtension(presetFile) + extension);
-        // The output file's extension determines the format.
-        writeJson(json.get(), newPreset);
-        backup(presetFile);
-        try {
-            Files.delete(presetFile);
-            sendMessage(sender, "Converted successfully. The original was moved to the backup directory.");
-        } catch (final IOException e) {
-            sendMessage(sender, "Converted successfully. The original could not be deleted.");
-        }
-    }
-
-    /** The standard help command, specifying the page number. */
-    private static void helpCommand(ICommandSender sender, String... args) {
-        requireArgs(args, 1);
-        final String arg = args[0];
-        final int page = StringUtils.isNumeric(arg) ? Integer.parseInt(arg) : 1;
-        displayHelp(sender, page);
-    }
-
-    private static ITextComponent getListElementText(Path file, boolean enabled) {
-        final String dir = getRelativeDir(file.getParent());
-        final String filename = noExtension(file);
-        final Style openButton = new Style()
-            .setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tcs("Open " + file.getFileName().toString() + ".")))
-            .setClickEvent(clickToOpen(file.toString()));
-        if (enabled) {
-            return tcs("\n")
-                .appendSibling(tcs(" + ").setStyle(ENABLED_INDICATOR_STYLE))
-                .appendSibling(tcs(filename + " ").setStyle(openButton))
-                .appendSibling(disableButton(filename, dir));
-        } else {
-            return tcs("\n")
-                .appendSibling(tcs(" - ").setStyle(DISABLED_INDICATOR_STYLE))
-                .appendSibling(tcs(filename + " ").setStyle(openButton))
-                .appendSibling(enableButton(filename, dir));
-        }
-    }
-
-    private static ITextComponent getViewDirectoryText(Path file) {
-        return tcs("\n / " + file.getFileName().toString() + " ")
-            .appendSibling(viewButton(file.toString()));
-    }
-
-    private static String getRelativeDir(Path file) {
-        final String path = file.toString();
-        final String cgPath = CaveInit.caveDir().toString();
-        return path.substring(cgPath.length());
-    }
-
-    /** Determines whether the input file points to a preset that is enabled. */
-    private static boolean isPresetEnabled(Path file) {
-        return PresetReader.getPresetJson(file)
-            .flatMap(preset -> getBool(preset, "enabled"))
-            .orElse(true);
-    }
-
-    private static Path locateFile(String[] args) {
-        if (args.length > 1) {
-            final Path dir = CaveInit.caveDir().resolve(args[1]);
-            final Optional<Path> located = CaveInit.locatePreset(dir, args[0]);
-            return located.orElseThrow(() -> runEx("File not found."));
-        } else {
-            final Optional<Path> located = CaveInit.locatePreset(CaveInit.presetDir(), args[0]);
-            return located.orElseGet(() -> locateRecursively(CaveInit.caveDir(), args[0])
-                .orElseThrow(() -> runEx("File not found.")));
-        }
-    }
-
-    /** Recursively locates a valid cave preset inside of the mod directory. */
-    private static Optional<Path> locateRecursively(Path dir, String name) {
-        for (Path f : listFiles(dir).orElse(List.of())) {
-            if (Files.isDirectory(f)) {
-                final Optional<Path> inDir = locateRecursively(f, name);
-                if (inDir.isPresent()) {
-                    return inDir;
-                }
-            } else if (CaveInit.validExtension(f) && noExtension(f).equals(name)) {
-                return Optional.of(f);
-            }
-        }
-        return Optional.empty();
-    }
-
-    /** Generates the help message, displaying usage for each sub-command. */
-    private static ITextComponent[] createHelpMessage() {
-        final List<TextComponentString> msgs = new ArrayList<>();
-        final int numLines = getNumElements(USAGE_TEXT) - USAGE_TEXT.length;
-        final int numPages = numLines / USAGE_LENGTH - 1;
-        // The actual pages..
-        for (int i = 0; i < USAGE_TEXT.length; i += USAGE_LENGTH) {
-            final TextComponentString header = getUsageHeader((i / USAGE_LENGTH) + 1, numPages);
-            // The elements on each page.
-            for (int j = i; j < i + USAGE_LENGTH && j < USAGE_TEXT.length; j++) {
-                final String[] full = USAGE_TEXT[j];
-                // Append the required elements.
-                header.appendText("\n");
-                appendUsageText(header, full[0], full[1]);
-                // Append any extra lines below.
-                for (int k  = 2; k < full.length; k++) {
-                    header.appendSibling(tcs("\n " + full[k]).setStyle(USAGE_STYLE));
-                }
-            }
-            msgs.add(header);
-        }
-        return msgs.toArray(new TextComponentString[0]);
-    }
-
-    private static int getNumElements(String[][] matrix) {
-        int numElements = 0;
-        for (String[] array : matrix) {
-            numElements += array.length;
-        }
-        return numElements;
-    }
-
-    private static TextComponentString getUsageHeader(int page, int max) {
-        final String header = USAGE_HEADER
-            .replace("X", String.valueOf(page))
-            .replace("Y", String.valueOf(max));
-        TextComponentString full = tcs("");
-        TextComponentString headerTCS = tcs(header);
-        headerTCS.setStyle(USAGE_HEADER_STYLE);
-        full.appendSibling(headerTCS);
-        return full;
-    }
-
-    /** A slightly neater way to append so many components to the help message. */
-    private static void appendUsageText(ITextComponent msg, String command, String usage) {
-        msg.appendSibling(usageText(command, usage));
-    }
-
-    /** Formats the input text to nicely display a command's usage. */
-    private static ITextComponent usageText(String command, String usage) {
-        ITextComponent msg = tcs(""); // Parent has no formatting.
-        msg.appendSibling(tcs(command));
-        msg.appendSibling(tcs(" :\n " + usage).setStyle(USAGE_STYLE));
-        return msg;
-    }
-
-    /** Creates a new enable button. */
-    private static ITextComponent enableButton(String fileName, String dir) {
-        final Style style = ENABLE_BUTTON_STYLE
-            .createDeepCopy()
-            .setClickEvent(clickToRun("/cave enable " + fileName + " " + dir + " && reload && list"));
-        return tcs("[ENABLE]")
-            .setStyle(style);
-    }
-
-    /** Creates a new enable button. */
-    private static ITextComponent disableButton(String fileName, String dir) {
-        final Style style = DISABLE_BUTTON_STYLE
-            .createDeepCopy()
-            .setClickEvent(clickToRun("/cave disable " + fileName + " " + dir + " && reload && list"));
-        return tcs("[DISABLE]")
-            .setStyle(style);
-    }
-
-    private static ITextComponent viewButton(String dir) {
-        final Style style = EXPLORE_BUTTON_STYLE
-            .createDeepCopy()
-            .setClickEvent(clickToRun("/cave listRaw " + dir));
-        return tcs("[VIEW]")
-            .setStyle(style);
-    }
-
-    /** A ClickEvent constructor for running commands. */
-    private static ClickEvent clickToRun(String command) {
-        return new ClickEvent(ClickEvent.Action.RUN_COMMAND, command);
-    }
-
-    /** A ClickEvent constructor for opening files. */
-    private static ClickEvent clickToOpen(String path) {
-        return new ClickEvent(ClickEvent.Action.OPEN_FILE, path);
-    }
-
-    private static void displayDirectories(ICommandSender user) {
-        final List<String> names = new ArrayList<>();
-        for (Path f : listFiles(CaveInit.caveDir(), Files::isDirectory).orElse(List.of())) {
-            names.add(f.getFileName().toString());
-        }
-        final String options = Arrays.toString(names.toArray(new String[0]));
-        sendError(user, f("Invalid directory. Options: {}", options));
-    }
-
-    /** Shorthand for sending a message to the input user. */
-    private static void sendMessage(ICommandSender user, String msg) {
-        user.sendMessage(tcs(msg));
-    }
-
-    private static void sendError(ICommandSender user, String msg) {
-        user.sendMessage(tcs(msg).setStyle(ERROR_STYLE));
-    }
-
-    /** Shorthand method for creating TextComponentStrings. */
-    private static TextComponentString tcs(String s) {
-        return new TextComponentString(s);
-    }
-
-    private static PotionEffect getNightVision() {
-        final Potion potion = Potion.getPotionFromResourceLocation("night_vision");
-        Objects.requireNonNull(potion, "Build error: invalid potion ID.");
-        return new PotionEffect(potion, Integer.MAX_VALUE, 0, true, false);
-    }
-
-    /** Ensures that at least `num` arguments are present. */
-    private static void requireArgs(String[] args, int num) {
-        if (args.length < num) {
-            throw runEx("Insufficient arguments for this command.");
-        }
-    }
 }

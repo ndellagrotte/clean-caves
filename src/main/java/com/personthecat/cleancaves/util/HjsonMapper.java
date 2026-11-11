@@ -1,21 +1,22 @@
 package com.personthecat.cleancaves.util;
 
+import com.personthecat.cleancaves.data.WallDecoratorSettings.Placement;
 import com.personthecat.cleancaves.model.Direction;
 import com.personthecat.cleancaves.model.FloatRange;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.model.ScalableFloat;
-import com.personthecat.cleancaves.data.WallDecoratorSettings.Placement;
 import fastnoise.FastNoise.CellularDistanceFunction;
 import fastnoise.FastNoise.CellularReturnType;
 import fastnoise.FastNoise.FractalType;
 import fastnoise.FastNoise.Interp;
 import fastnoise.FastNoise.NoiseType;
+import org.hjson.JsonObject;
+import org.hjson.JsonValue;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.structure.template.PlacementSettings;
-import org.hjson.JsonObject;
-import org.hjson.JsonValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -150,7 +151,7 @@ public class HjsonMapper {
 
     public HjsonMapper mapRequiredStateList(String field, String parent, Consumer<List<IBlockState>> mapper) {
         final List<IBlockState> states = HjsonTools.getStateList(json, field)
-            .orElseThrow(() -> runExF("{}.{} is required", parent, field));
+                .orElseThrow(() -> runExF("{}.{} is required", parent, field));
         mapper.accept(states);
         return this;
     }
@@ -167,7 +168,7 @@ public class HjsonMapper {
 
     public HjsonMapper mapRequiredBlockPosList(String field, String parent, Consumer<List<BlockPos>> mapper) {
         final List<BlockPos> positions = HjsonTools.getPositionList(json, field)
-            .orElseThrow(() -> runExF("{}.{} is required", parent, field));
+                .orElseThrow(() -> runExF("{}.{} is required", parent, field));
         mapper.accept(positions);
         return this;
     }
@@ -191,9 +192,10 @@ public class HjsonMapper {
 
     public <T> HjsonMapper mapArray(String field, Function<JsonObject, T> mapper, Consumer<List<T>> ifPresent) {
         if (json.has(field)) {
-            final List<T> list = HjsonTools.getObjectArray(json, field).stream()
-                .map(mapper)
-                .collect(Collectors.toList());
+            final List<T> list = HjsonTools.getObjectArray(json, field)
+                    .stream()
+                    .map(mapper)
+                    .collect(Collectors.toList());
             ifPresent.accept(list);
         }
         return this;

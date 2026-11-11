@@ -4,6 +4,7 @@ import com.personthecat.cleancaves.data.RavineSettings;
 import com.personthecat.cleancaves.model.PrimerData;
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import fastnoise.FastNoise;
+
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
@@ -28,24 +29,25 @@ public class RavineGenerator extends MapGenerator {
     @Override
     protected void mapGenerate(MapGenerationContext ctx) {
         if (ctx.rand.nextInt(cfg.chance()) == 0) {
-            this.startRavine(ctx.world, ctx.rand.nextLong(), ctx.destChunkX, ctx.destChunkZ, ctx.chunkX, ctx.chunkZ, ctx.primer);
+            this.startRavine(ctx.world, ctx.rand.nextLong(), ctx.destChunkX, ctx.destChunkZ, ctx.chunkX, ctx.chunkZ,
+                    ctx.primer);
         }
     }
 
     @Override
-    protected void fillSphere(SphereData sphere, double cX, double cY, double cZ, int absX, int absZ,
-              double rXZ, double rY, int miX, int maX, int miY, int maY, int miZ, int maZ) {
+    protected void fillSphere(SphereData sphere, double cx, double cy, double cz, int absX, int absZ, double radXZ,
+            double radY, int miX, int maX, int miY, int maY, int miZ, int maZ) {
         for (int x = miX; x < maX; x++) {
-            final double distX = ((x + absX) + 0.5 - cX) / rXZ;
+            final double distX = ((x + absX) + 0.5 - cx) / radXZ;
             final double distX2 = distX * distX;
             for (int z = miZ; z < maZ; z++) {
-                final double distZ = ((z + absZ) + 0.5 - cZ) / rXZ;
+                final double distZ = ((z + absZ) + 0.5 - cz) / radXZ;
                 final double distZ2 = distZ * distZ;
                 if (distX2 + distZ2 >= 1.0) {
                     continue;
                 }
                 for (int y = maY; y > miY; y--) {
-                    final double distY = ((y - 1) + 0.5 - cY) / rY;
+                    final double distY = ((y - 1) + 0.5 - cy) / radY;
                     final double distY2 = distY * distY;
                     if ((distX2 + distZ2) * mut[y - 1] + distY2 / this.cutoff < 1.0) {
                         sphere.inner.add(x, y, z);
@@ -56,31 +58,31 @@ public class RavineGenerator extends MapGenerator {
     }
 
     @Override
-    protected void fillDouble(SphereData sphere, double cX, double cY, double cZ, int absX, int absZ, double rXZ,
-              double rY, double roXZ, double roY, int miX, int maX, int miY, int maY, int miZ, int maZ) {
-        final double rXZ2 = rXZ * rXZ;
-        final double rY2 = rY * rY;
+    protected void fillDouble(SphereData sphere, double cx, double cy, double cz, int absX, int absZ, double radXZ,
+            double radY, double roXZ, double roY, int miX, int maX, int miY, int maY, int miZ, int maZ) {
+        final double rXZ2 = radXZ * radXZ;
+        final double rY2 = radY * radY;
         final double roXZ2 = roXZ * roXZ;
         final double roY2 = roY * roY;
-        final int d = (int) (roY - rY);
+        final int d = (int) (roY - radY);
         final int miOY = Math.max(1, miY - d);
         final int maOY = Math.min(248, maY + d);
 
         for (int x = miX; x < maX; x++) {
-            final double distX = ((x + absX) + 0.5 - cX);
+            final double distX = ((x + absX) + 0.5 - cx);
             final double distX2 = distX * distX;
             for (int z = miZ; z < maZ; z++) {
-                final double distZ = ((z + absZ) + 0.5 - cZ);
+                final double distZ = ((z + absZ) + 0.5 - cz);
                 final double distZ2 = distZ * distZ;
                 final double sumRoXZ = distX2 / roXZ2 + distZ2 / roXZ2;
                 if (sumRoXZ >= 1.0) {
                     continue;
                 }
                 final double sumRXZ = distX2 / rXZ2 + distZ2 / rXZ2;
-                this.coverOuter(sphere, sumRoXZ, roY2, x, z, cY, miOY, miY);
-                this.coverOuter(sphere, sumRoXZ, roY2, x, z, cY, maY, maOY);
+                this.coverOuter(sphere, sumRoXZ, roY2, x, z, cy, miOY, miY);
+                this.coverOuter(sphere, sumRoXZ, roY2, x, z, cy, maY, maOY);
                 for (int y = maY; y > miY; y--) {
-                    final double distY = ((y - 1) + 0.5 - cY);
+                    final double distY = ((y - 1) + 0.5 - cy);
                     final double distY2 = distY * distY;
                     if (sumRXZ * mut[y - 1] + distY2 / rY2 / this.cutoff < 1.0) {
                         sphere.inner.add(x, y, z);
@@ -92,10 +94,10 @@ public class RavineGenerator extends MapGenerator {
         }
     }
 
-    private void coverOuter(SphereData sphere, double sumRoXZ, double roY2, int x, int z, double cY, int min, int max) {
+    private void coverOuter(SphereData sphere, double sumRoXZ, double roY2, int x, int z, double cy, int min, int max) {
         if (this.cutoff > 1.0) {
             for (int y = max; y > min; y--) {
-                final double distY = ((y - 1) + 0.5 - cY);
+                final double distY = ((y - 1) + 0.5 - cy);
                 final double distY2 = distY * distY;
                 if (sumRoXZ * mut[y - 1] + distY2 / roY2 / this.cutoff < 1.0) {
                     sphere.shell.add(x, y, z);
@@ -136,11 +138,11 @@ public class RavineGenerator extends MapGenerator {
 
         for (int currentPos = 0; currentPos < distance; currentPos++) {
             // Determine the radius by `scale`.
-            final double rXZ = 1.5D + (MathHelper.sin(currentPos * (float) Math.PI / distance) * path.getScale());
-            final double rY = rXZ * path.getStretch();
+            final double radXZ = 1.5D + (MathHelper.sin(currentPos * (float) Math.PI / distance) * path.getScale());
+            final double radY = radXZ * path.getStretch();
             final double d = this.decorators.shell.cfg.radius();
-            final double roXZ = rXZ + d;
-            final double roY = rY + d;
+            final double roXZ = radXZ + d;
+            final double roY = radY + d;
 
             path.update(mast, true, this.cfg.noiseYFactor(), 0.05F);
 
@@ -160,7 +162,7 @@ public class RavineGenerator extends MapGenerator {
             if (!this.conditions.height.contains((int) path.getY())) {
                 continue;
             }
-            this.generateSphere(data, world, dec, path.getX(), path.getY(), path.getZ(), rXZ, rY, roXZ, roY);
+            this.generateSphere(data, world, dec, path.getX(), path.getY(), path.getZ(), radXZ, radY, roXZ, roY);
         }
     }
 
@@ -190,4 +192,5 @@ public class RavineGenerator extends MapGenerator {
             this.mut[i] = wallNoise.GetAdjustedNoise(0, i);
         }
     }
+
 }

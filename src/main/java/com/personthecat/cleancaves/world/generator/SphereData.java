@@ -35,4 +35,5 @@ public class SphereData {
         this.inner.reset();
         this.shell.reset();
     }
+
 }

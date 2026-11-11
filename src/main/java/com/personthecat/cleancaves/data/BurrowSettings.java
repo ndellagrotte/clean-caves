@@ -7,52 +7,40 @@ import org.hjson.JsonObject;
 import java.util.Optional;
 
 /** Noise-map pairs which trace a "worm" through the world, producing organic tunnels. */
-public record BurrowSettings(
-    ConditionSettings conditions,
-    DecoratorSettings decorators,
-    NoiseMapSettings map,
-    NoiseMapSettings offset,
-    float radius,
-    float target,
-    float stretch,
-    float exponent,
-    float shift,
-    float wallDistance,
-    float wallExponent,
-    Optional<TunnelSettings> branches
-) {
+public record BurrowSettings(ConditionSettings conditions,
+        DecoratorSettings decorators,
+        NoiseMapSettings map,
+        NoiseMapSettings offset,
+        float radius,
+        float target,
+        float stretch,
+        float exponent,
+        float shift,
+        float wallDistance,
+        float wallExponent,
+        Optional<TunnelSettings> branches) {
+
     /** The default noise settings used for the map generator. */
     private static final NoiseMapSettings DEFAULT_MAP = NoiseMapSettings.builder()
-        .frequency(0.005F).perturb(true).perturbAmp(0.1F).perturbFreq(2.5F).build();
+            .frequency(0.005F)
+            .perturb(true)
+            .perturbAmp(0.1F)
+            .perturbFreq(2.5F)
+            .build();
 
     /** The default noise settings used for the offset generator. */
     private static final NoiseMapSettings DEFAULT_OFFSET = NoiseMapSettings.builder()
-        .frequency(0.01F).range(Range.of(10, 30)).build();
+            .frequency(0.01F)
+            .range(Range.of(10, 30))
+            .build();
 
     /** Default spawn conditions for all burrow generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(10, 50)).build();
+            .height(Range.of(10, 50))
+            .build();
 
     /** Default decorator settings for all burrow generators. */
     private static final DecoratorSettings DEFAULT_DECORATORS = DecoratorSettings.DEFAULTS;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String decorators = "decorators";
-        public static final String map = "map";
-        public static final String offset = "offset";
-        public static final String radius = "radius";
-        public static final String target = "target";
-        public static final String stretch = "stretch";
-        public static final String exponent = "exponent";
-        public static final String shift = "shift";
-        public static final String wallDistance = "wallDistance";
-        public static final String wallExponent = "wallExponent";
-        public static final String branches = "branches";
-
-        private Keys() {}
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -68,24 +56,46 @@ public record BurrowSettings(
         final ConditionSettings inheritedConditions = builder.conditions;
         final DecoratorSettings inheritedDecorators = builder.decorators;
         return new HjsonMapper(json)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inheritedConditions)))
-            .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inheritedDecorators)))
-            .mapObject(Keys.map, o -> builder.map(NoiseMapSettings.from(o, DEFAULT_MAP)))
-            .mapObject(Keys.offset, o -> builder.offset(NoiseMapSettings.from(o, DEFAULT_OFFSET)))
-            .mapFloat(Keys.radius, builder::radius)
-            .mapFloat(Keys.target, builder::target)
-            .mapFloat(Keys.stretch, builder::stretch)
-            .mapFloat(Keys.exponent, builder::exponent)
-            .mapFloat(Keys.shift, builder::shift)
-            .mapFloat(Keys.wallDistance, builder::wallDistance)
-            .mapFloat(Keys.wallExponent, builder::wallExponent)
-            // Branches inherit the conditions and decorators resolved for this burrow.
-            .mapObject(Keys.branches, o -> builder.branches(Optional.of(
-                TunnelSettings.from(o, builder.conditions, builder.decorators))))
-            .release(builder::build);
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inheritedConditions)))
+                .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inheritedDecorators)))
+                .mapObject(Keys.MAP, o -> builder.map(NoiseMapSettings.from(o, DEFAULT_MAP)))
+                .mapObject(Keys.OFFSET, o -> builder.offset(NoiseMapSettings.from(o, DEFAULT_OFFSET)))
+                .mapFloat(Keys.RADIUS, builder::radius)
+                .mapFloat(Keys.TARGET, builder::target)
+                .mapFloat(Keys.STRETCH, builder::stretch)
+                .mapFloat(Keys.EXPONENT, builder::exponent)
+                .mapFloat(Keys.SHIFT, builder::shift)
+                .mapFloat(Keys.WALL_DISTANCE, builder::wallDistance)
+                .mapFloat(Keys.WALL_EXPONENT, builder::wallExponent)
+                // Branches inherit the conditions and decorators resolved for this burrow.
+                .mapObject(Keys.BRANCHES,
+                        o -> builder.branches(Optional.of(TunnelSettings.from(o, builder.conditions,
+                                builder.decorators))))
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String DECORATORS = "decorators";
+        public static final String MAP = "map";
+        public static final String OFFSET = "offset";
+        public static final String RADIUS = "radius";
+        public static final String TARGET = "target";
+        public static final String STRETCH = "stretch";
+        public static final String EXPONENT = "exponent";
+        public static final String SHIFT = "shift";
+        public static final String WALL_DISTANCE = "wallDistance";
+        public static final String WALL_EXPONENT = "wallExponent";
+        public static final String BRANCHES = "branches";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         ConditionSettings conditions = DEFAULT_CONDITIONS;
         DecoratorSettings decorators = DEFAULT_DECORATORS;
         private NoiseMapSettings map = DEFAULT_MAP;
@@ -99,7 +109,7 @@ public record BurrowSettings(
         private float wallExponent = 2.0F;
         private Optional<TunnelSettings> branches = Optional.empty();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -162,9 +172,10 @@ public record BurrowSettings(
         }
 
         public BurrowSettings build() {
-            return new BurrowSettings(this.conditions, this.decorators, this.map, this.offset,
-                this.radius, this.target, this.stretch, this.exponent, this.shift,
-                this.wallDistance, this.wallExponent, this.branches);
+            return new BurrowSettings(this.conditions, this.decorators, this.map, this.offset, this.radius, this.target,
+                    this.stretch, this.exponent, this.shift, this.wallDistance, this.wallExponent, this.branches);
         }
+
     }
+
 }

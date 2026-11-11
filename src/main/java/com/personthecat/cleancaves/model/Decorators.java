@@ -1,6 +1,7 @@
 package com.personthecat.cleancaves.model;
 
 import com.personthecat.cleancaves.data.DecoratorSettings;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
@@ -33,8 +34,7 @@ public final class Decorators {
 
     private Decorators(DecoratorSettings settings, World world) {
         this.canReplace = compileCanReplace(settings);
-        this.caveBlocks = settings.caveBlocks().stream()
-            .map(b -> new ConfiguredCaveBlock(b, world)).toList();
+        this.caveBlocks = settings.caveBlocks().stream().map(b -> new ConfiguredCaveBlock(b, world)).toList();
         this.wallMap = WallDecoratorMap.sort(settings.wallDecorators(), world);
         this.ponds = settings.ponds().stream().map(p -> new ConfiguredPond(p, world)).toList();
         this.shell = new ConfiguredShell(settings.shell(), world);
@@ -64,4 +64,5 @@ public final class Decorators {
         }
         return replaceable::contains;
     }
+
 }

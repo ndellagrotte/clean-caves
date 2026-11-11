@@ -6,24 +6,10 @@ import org.hjson.JsonObject;
 import static com.personthecat.cleancaves.util.CommonMethods.invert;
 
 /** How a wider chamber should spawn at the origin of a tunnel system. */
-public record RoomSettings(
-    DecoratorSettings decorators,
-    float scale,
-    float stretch,
-    int chance
-) {
+public record RoomSettings(DecoratorSettings decorators, float scale, float stretch, int chance) {
+
     /** Default decorator settings for all room generators. */
     private static final DecoratorSettings DEFAULT_DECORATORS = DecoratorSettings.DEFAULTS;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String decorators = "decorators";
-        public static final String scale = "scale";
-        public static final String stretch = "stretch";
-        public static final String chance = "chance";
-
-        private Keys() {}
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -41,20 +27,33 @@ public record RoomSettings(
     private static RoomSettings copyInto(JsonObject json, Builder builder) {
         final DecoratorSettings inherited = builder.decorators;
         return new HjsonMapper(json)
-            .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inherited)))
-            .mapFloat(Keys.scale, builder::scale)
-            .mapFloat(Keys.stretch, builder::stretch)
-            .mapFloat(Keys.chance, f -> builder.chance(invert(f)))
-            .release(builder::build);
+                .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inherited)))
+                .mapFloat(Keys.SCALE, builder::scale)
+                .mapFloat(Keys.STRETCH, builder::stretch)
+                .mapFloat(Keys.CHANCE, f -> builder.chance(invert(f)))
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String DECORATORS = "decorators";
+        public static final String SCALE = "scale";
+        public static final String STRETCH = "stretch";
+        public static final String CHANCE = "chance";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         DecoratorSettings decorators = DEFAULT_DECORATORS;
         private float scale = 6.0F;
         private float stretch = 0.5F;
         private int chance = 10;
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder decorators(DecoratorSettings decorators) {
             this.decorators = decorators;
@@ -79,5 +78,7 @@ public record RoomSettings(
         public RoomSettings build() {
             return new RoomSettings(this.decorators, this.scale, this.stretch, this.chance);
         }
+
     }
+
 }

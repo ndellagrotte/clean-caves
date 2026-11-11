@@ -6,6 +6,7 @@ import fastnoise.FastNoise;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
+
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -103,7 +104,8 @@ public final class Conditions {
     public Range getColumn(int[][] heightmap, int x, int z) {
         final int min = this.height.min() + (int) this.floor.GetAdjustedNoise((float) x, (float) z);
         final int max = Math.min(this.height.max(), heightmap[x & 15][z & 15])
-            + (int) this.ceiling.GetAdjustedNoise((float) x, (float) z);
+                + (int) this.ceiling.GetAdjustedNoise((float) x, (float) z);
         return Range.checkedOrEmpty(min, max);
     }
+
 }

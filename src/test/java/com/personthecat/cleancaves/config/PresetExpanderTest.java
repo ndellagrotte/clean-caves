@@ -10,10 +10,8 @@ import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The import and variable system is what makes presets composable, and it runs before anything is
@@ -44,53 +42,49 @@ class PresetExpanderTest {
     @DisplayName("expands a variable declared in the same preset")
     void expandsLocalVariable() {
         final JsonObject preset = new JsonObject()
-            .add("HEIGHT", 40)
-            .add("variables", new JsonObject().add("HEIGHT", 40))
-            .add("count", "$HEIGHT");
+                .add("HEIGHT", 40)
+                .add("variables", new JsonObject().add("HEIGHT", 40))
+                .add("count", "$HEIGHT");
         final JsonObject result = expand(preset, new LinkedHashMap<>());
-        assertEquals(40, result.get("count").asInt());
+        assertThat(result.get("count").asInt()).isEqualTo(40);
     }
 
     @Test
     @DisplayName("imports pull variables in from another file")
     void expandsImportedVariable() {
-        final JsonObject preset = new JsonObject()
-            .add("imports", "shared.cave")
-            .add("count", "$SHARED");
+        final JsonObject preset = new JsonObject().add("imports", "shared.cave").add("count", "$SHARED");
         final JsonObject result = expand(preset, imports(new JsonObject().add("SHARED", 12)));
-        assertEquals(12, result.get("count").asInt());
+        assertThat(result.get("count").asInt()).isEqualTo(12);
     }
 
     @Test
     @DisplayName("`as` renames the imported variable")
     void supportsImportRename() {
         final JsonObject preset = new JsonObject()
-            .add("imports", "shared.cave::SHARED as LOCAL")
-            .add("count", "$LOCAL");
+                .add("imports", "shared.cave::SHARED as LOCAL")
+                .add("count", "$LOCAL");
         final JsonObject result = expand(preset, imports(new JsonObject().add("SHARED", 5)));
-        assertEquals(5, result.get("count").asInt());
+        assertThat(result.get("count").asInt()).isEqualTo(5);
     }
 
     @Test
     @DisplayName("arithmetic in a value is evaluated after variables are substituted")
     void evaluatesArithmetic() {
         final JsonObject preset = new JsonObject()
-            .add("BASE", 10)
-            .add("variables", new JsonObject().add("BASE", 10))
-            .add("count", "$BASE * 3");
+                .add("BASE", 10)
+                .add("variables", new JsonObject().add("BASE", 10))
+                .add("count", "$BASE * 3");
         final JsonObject result = expand(preset, new LinkedHashMap<>());
-        assertEquals(30, result.get("count").asInt());
+        assertThat(result.get("count").asInt()).isEqualTo(30);
     }
 
     @Test
     @DisplayName("imports and variables are stripped once expansion finishes")
     void deletesScaffolding() {
-        final JsonObject preset = new JsonObject()
-            .add("imports", "shared.cave")
-            .add("count", "$SHARED");
+        final JsonObject preset = new JsonObject().add("imports", "shared.cave").add("count", "$SHARED");
         final JsonObject result = expand(preset, imports(new JsonObject().add("SHARED", 1)));
-        assertNull(result.get("imports"));
-        assertNull(result.get("variables"));
+        assertThat(result.get("imports")).isNull();
+        assertThat(result.get("variables")).isNull();
     }
 
     @Test
@@ -98,17 +92,14 @@ class PresetExpanderTest {
     void appliesRecursiveOverride() {
         final JsonObject tunnels = new JsonObject().add("count", 1);
         final JsonObject ravines = new JsonObject().add("count", 2);
-        final JsonObject preset = new JsonObject()
-            .add("*count", 99)
-            .add("tunnels", tunnels)
-            .add("ravines", ravines);
+        final JsonObject preset = new JsonObject().add("*count", 99).add("tunnels", tunnels).add("ravines", ravines);
 
         final JsonObject result = expand(preset, new LinkedHashMap<>());
 
-        assertEquals(99, result.get("tunnels").asObject().get("count").asInt());
-        assertEquals(99, result.get("ravines").asObject().get("count").asInt());
+        assertThat(result.get("tunnels").asObject().get("count").asInt()).isEqualTo(99);
+        assertThat(result.get("ravines").asObject().get("count").asInt()).isEqualTo(99);
         // The directive itself must not survive into the parsed preset.
-        assertFalse(result.names().contains("*count"));
+        assertThat(result.names().contains("*count")).isFalse();
     }
 
     @Test
@@ -116,19 +107,17 @@ class PresetExpanderTest {
     void importVariablesArePrivate() {
         // The import can use NESTED to build its own exported value...
         final JsonObject definition = new JsonObject()
-            .add("variables", new JsonObject().add("NESTED", 8))
-            .add("EXPORTED", "$NESTED");
-        final JsonObject preset = new JsonObject()
-            .add("imports", "shared.cave")
-            .add("count", "$EXPORTED");
+                .add("variables", new JsonObject().add("NESTED", 8))
+                .add("EXPORTED", "$NESTED");
+        final JsonObject preset = new JsonObject().add("imports", "shared.cave").add("count", "$EXPORTED");
         final JsonValue count = expand(preset, imports(definition)).get("count");
-        assertEquals(8, count.asInt());
+        assertThat(count.asInt()).isEqualTo(8);
 
         // ...but the importer cannot reach NESTED itself.
-        final JsonObject leaky = new JsonObject()
-            .add("imports", "shared.cave")
-            .add("count", "$NESTED");
-        assertThrows(RuntimeException.class, () -> expand(leaky, imports(
-            new JsonObject().add("variables", new JsonObject().add("NESTED", 8)))));
+        final JsonObject leaky = new JsonObject().add("imports", "shared.cave").add("count", "$NESTED");
+        assertThatThrownBy(() -> expand(leaky,
+                imports(new JsonObject().add("variables",
+                        new JsonObject().add("NESTED", 8))))).isInstanceOf(RuntimeException.class);
     }
+
 }

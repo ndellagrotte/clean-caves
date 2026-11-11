@@ -6,8 +6,9 @@ import org.hjson.JsonValue;
 
 import java.util.Optional;
 
+public final class PresetCompressor {
 
-public class PresetCompressor {
+    private PresetCompressor() { }
 
     /**
      * Compresses this object slightly. For now, this only implies compressing
@@ -63,4 +64,5 @@ public class PresetCompressor {
         }
         return Optional.empty();
     }
+
 }

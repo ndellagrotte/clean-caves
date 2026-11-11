@@ -1,7 +1,11 @@
 package com.personthecat.cleancaves.world.feature;
 
+import com.personthecat.cleancaves.Reference;
 import com.personthecat.cleancaves.data.StructureSettings;
 import com.personthecat.cleancaves.model.Range;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Rotation;
 import net.minecraft.util.math.BlockPos;
@@ -10,14 +14,10 @@ import net.minecraft.world.gen.structure.template.Template;
 
 import java.util.Optional;
 import java.util.Random;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import com.personthecat.cleancaves.Reference;
-
 
 public class StructureGenerator extends FeatureGenerator {
-    private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
 
+    private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
 
     private final StructureSettings cfg;
     private final Template structure;
@@ -26,6 +26,27 @@ public class StructureGenerator extends FeatureGenerator {
         super(cfg.conditions(), world);
         this.cfg = cfg;
         this.structure = StructureSpawner.getTemplate(cfg.name(), world);
+    }
+
+    /** Moves each dimension by half of `size` in the opposite direction. */
+    private static BlockPos centerBySize(BlockPos toCenter, BlockPos size) {
+        final int xOffset = (size.getX() / 2) * -1;
+        final int zOffset = (size.getZ() / 2) * -1;
+        return toCenter.add(xOffset, 0, zOffset);
+    }
+
+    /** Applies an offset to the original BlockPos. */
+    private static BlockPos offset(BlockPos original, BlockPos offset) {
+        return original.add(offset.getX(), offset.getY(), offset.getZ());
+    }
+
+    /**
+     * Returns a random relative coordinate such that result + size <= 16. In other words, when
+     * a structure is started at this coordinate, the other end cannot exceed chunk bounds.
+     */
+    private static int cornerInsideChunkBounds(Random rand, int size) {
+        final int min = size / 2;
+        return rand.nextInt(16 - min) + min;
     }
 
     @Override
@@ -42,7 +63,7 @@ public class StructureGenerator extends FeatureGenerator {
 
     private void generateSingle(WorldContext ctx) {
         final Optional<BlockPos> spawnPos = this.getSpawnPos(ctx)
-            .filter(pos -> conditions.noise.GetBoolean(pos.getX(), pos.getY(), pos.getZ()));
+                .filter(pos -> conditions.noise.GetBoolean(pos.getX(), pos.getY(), pos.getZ()));
         // Attempt to locate a suitable spawn position and then proceed.
         spawnPos.ifPresent(pos -> {
             if (allChecksPass(pos, ctx.world)) {
@@ -55,11 +76,11 @@ public class StructureGenerator extends FeatureGenerator {
 
     private boolean allChecksPass(BlockPos pos, World world) {
         return checkSources(cfg.matchers(), world, pos)
-            && checkNonSolid(cfg.nonSolidChecks(), world, pos)
-            && checkSolid(cfg.solidChecks(), world, pos)
-            && checkAir(cfg.airChecks(), world, pos)
-            && checkWater(cfg.waterChecks(), world, pos)
-            && checkBlocks(cfg.blockChecks(), world, pos);
+                && checkNonSolid(cfg.nonSolidChecks(), world, pos)
+                && checkSolid(cfg.solidChecks(), world, pos)
+                && checkAir(cfg.airChecks(), world, pos)
+                && checkWater(cfg.waterChecks(), world, pos)
+                && checkBlocks(cfg.blockChecks(), world, pos);
     }
 
     /** Attempts to determine a suitable spawn point in the current location. */
@@ -100,10 +121,12 @@ public class StructureGenerator extends FeatureGenerator {
             final int z = xz.getZ();
             final Range height = conditions.getColumn(x, z);
             final int maxY = cfg.checkSurface()
-                ? Math.min(info.heightmap[x & 15][z & 15] - SURFACE_ROOM, height.max())
-                : info.world.getActualHeight();
+                    ? Math.min(info.heightmap[x & 15][z & 15] - SURFACE_ROOM, height.max())
+                    : info.world.getActualHeight();
             final int minY = height.min();
-            if (minY >= maxY || !conditions.region.GetBoolean(x, z)) continue;
+            if (minY >= maxY || !conditions.region.GetBoolean(x, z)) {
+                continue;
+            }
 
             final int y;
             // Search both -> just up -> just down.
@@ -238,8 +261,8 @@ public class StructureGenerator extends FeatureGenerator {
     private Optional<BlockPos> randCoordsNS(WorldContext info, int sizeX, int y) {
         final int x = cornerInsideChunkBounds(info.rand, sizeX) + info.offsetX;
         final int z = info.rand.nextBoolean()
-            ? this.findOpeningNorth(info.world, x, y, info.offsetZ)
-            : this.findOpeningSouth(info.world, x, y, info.offsetZ);
+                ? this.findOpeningNorth(info.world, x, y, info.offsetZ)
+                : this.findOpeningSouth(info.world, x, y, info.offsetZ);
         if (z != NONE_FOUND && y < info.heightmap[x & 15][z & 15]) {
             return Optional.of(new BlockPos(x, y, z));
         }
@@ -253,8 +276,8 @@ public class StructureGenerator extends FeatureGenerator {
     private Optional<BlockPos> randCoordsEW(WorldContext info, int sizeZ, int y) {
         final int z = cornerInsideChunkBounds(info.rand, sizeZ) + info.offsetZ;
         final int x = info.rand.nextBoolean()
-            ? this.findOpeningEast(info.world, y, z, info.offsetX)
-            : this.findOpeningWest(info.world, y, z, info.offsetX);
+                ? this.findOpeningEast(info.world, y, z, info.offsetX)
+                : this.findOpeningWest(info.world, y, z, info.offsetX);
         if (x != NONE_FOUND && y < info.heightmap[x & 15][z & 15]) {
             return Optional.of(new BlockPos(x, y, z));
         }
@@ -301,18 +324,6 @@ public class StructureGenerator extends FeatureGenerator {
         return Optional.empty();
     }
 
-    /** Moves each dimension by half of `size` in the opposite direction. */
-    private static BlockPos centerBySize(BlockPos toCenter, BlockPos size) {
-        final int xOffset = (size.getX() / 2) * -1;
-        final int zOffset = (size.getZ() / 2) * -1;
-        return toCenter.add(xOffset, 0, zOffset);
-    }
-
-    /** Applies an offset to the original BlockPos. */
-    private static BlockPos offset(BlockPos original, BlockPos offset) {
-        return original.add(offset.getX(), offset.getY(), offset.getZ());
-    }
-
     /** All operations related to structures before spawning should be organized herein. */
     private void preStructureSpawn(WorldContext info, BlockPos pos) {
         if (cfg.rotateRandomly()) {
@@ -325,19 +336,11 @@ public class StructureGenerator extends FeatureGenerator {
         if (!cfg.command().isEmpty()) {
             final MinecraftServer server = info.world.getMinecraftServer();
             final String interpolated = cfg.command()
-                .replace("{x}", String.valueOf(pos.getX()))
-                .replace("{y}", String.valueOf(pos.getY()))
-                .replace("{z}", String.valueOf(pos.getZ()));
+                    .replace("{x}", String.valueOf(pos.getX()))
+                    .replace("{y}", String.valueOf(pos.getY()))
+                    .replace("{z}", String.valueOf(pos.getZ()));
             server.commandManager.executeCommand(server, interpolated);
         }
     }
 
-    /**
-     * Returns a random relative coordinate such that result + size <= 16. In other words, when
-     * a structure is started at this coordinate, the other end cannot exceed chunk bounds.
-     */
-    private static int cornerInsideChunkBounds(Random rand, int size) {
-        final int min = size / 2;
-        return rand.nextInt(16 - min) + min;
-    }
 }

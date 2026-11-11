@@ -3,6 +3,7 @@ package com.personthecat.cleancaves.world.feature;
 import com.personthecat.cleancaves.data.ConditionSettings;
 import com.personthecat.cleancaves.model.BlockCheck;
 import com.personthecat.cleancaves.model.Conditions;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -38,15 +39,15 @@ public abstract class FeatureGenerator {
         this.world = new WeakReference<>(world);
     }
 
-    protected final World getWorld() {
-        return Objects.requireNonNull(world.get(), "World reference has been culled.");
-    }
-
     public final void generate(WorldContext ctx) {
         final int dim = ctx.world.provider.getDimension();
         if (this.conditions.dimensions.test(dim)) {
             doGenerate(ctx);
         }
+    }
+
+    protected final World getWorld() {
+        return Objects.requireNonNull(world.get(), "World reference has been culled.");
     }
 
     protected abstract void doGenerate(WorldContext ctx);

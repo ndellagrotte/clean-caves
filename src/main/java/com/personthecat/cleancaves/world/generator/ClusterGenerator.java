@@ -4,12 +4,13 @@ import com.personthecat.cleancaves.data.ClusterSettings;
 import com.personthecat.cleancaves.model.Conditions;
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import com.personthecat.cleancaves.world.RandomChunkSelector;
+import org.apache.commons.lang3.tuple.Pair;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkPrimer;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -25,6 +26,31 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
     public ClusterGenerator(List<ClusterSettings> cfg, World world) {
         super(cfg, c -> c.conditions(), world);
         this.selector = new RandomChunkSelector(world.getSeed());
+    }
+
+    private static void spawnCluster(List<ClusterInfo> clusters, ChunkPrimer primer, Random rand, int x, int y, int z,
+            int actualX, int actualZ) {
+        final IBlockState state = primer.getBlockState(x, y, z);
+        for (ClusterInfo info : clusters) {
+            if (info.cluster.canSpawn(state)) {
+                final BlockPos origin = info.center;
+                final double distX = actualX - origin.getX();
+                final double distY = y - origin.getY();
+                final double distZ = actualZ - origin.getZ();
+                final double distX2 = distX * distX;
+                final double distY2 = distY * distY;
+                final double distZ2 = distZ * distZ;
+
+                // Ensure that we're within the sphere. Note: wall blocks could be && sum >= 0.9
+                if (distX2 / info.radX2 + distY2 / info.radY2 + distZ2 / info.radZ2 <= 1) {
+                    final double chance = info.cluster.integrity();
+                    if (chance == 1.0 || rand.nextFloat() <= chance) {
+                        primer.setBlockState(x, y, z, info.state);
+                        return; // Already placed. Don't continue.
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -51,20 +77,21 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
             final int clusterSeed = rand.nextInt();
 
             // Locate any possible origins for this cluster based on its radii.
-            for (int cX = chunkX - cRadiusX; cX <= chunkX + cRadiusX; cX++) {
-                for (int cZ = chunkZ - cRadiusZ; cZ <= chunkZ + cRadiusZ; cZ++) {
+            for (int cx = chunkX - cRadiusX; cx <= chunkX + cRadiusX; cx++) {
+                for (int cz = chunkZ - cRadiusZ; cz <= chunkZ + cRadiusZ; cz++) {
 
                     // Get absolute coordinates, generate in the center.
-                    final int x = (cX * 16) + 8, z = (cZ * 16) + 8;
+                    final int x = (cx * 16) + 8;
+                    final int z = (cz * 16) + 8;
                     final Biome b = world.getBiomeProvider().getBiome(new BlockPos(x, 0, z));
                     if (conditions.biomes.test(b)) {
                         for (Pair<IBlockState, Integer> pair : cfg.states()) {
                             final IBlockState state = pair.getLeft();
                             final int id = pair.getRight();
 
-                            if (selector.getBooleanForCoordinates(id, cX, cZ, threshold)) {
+                            if (selector.getBooleanForCoordinates(id, cx, cz, threshold)) {
                                 // Get an RNG unique to this chunk.
-                                final Random localRand = new XoRoShiRo(cX ^ cZ ^ clusterSeed);
+                                final Random localRand = new XoRoShiRo(cx ^ cz ^ clusterSeed);
                                 final int y = cfg.centerHeight().rand(localRand);
                                 // Finalize all values.
                                 final BlockPos origin = new BlockPos(x, y, z);
@@ -72,8 +99,9 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
                                 final int radY = cfg.radiusY().rand(localRand) - (cfg.radiusY().diff() / 2);
                                 final int radZ = cfg.radiusZ().rand(localRand) - (cfg.radiusZ().diff() / 2);
                                 // Add the new information to be returned.
-                                this.clusterMap.computeIfAbsent(conditions, c -> new ArrayList<>())
-                                    .add(new ClusterInfo(cfg, state, id, origin, radX, radY, radZ));
+                                this.clusterMap
+                                        .computeIfAbsent(conditions, c -> new ArrayList<>())
+                                        .add(new ClusterInfo(cfg, state, id, origin, radX, radY, radZ));
                             }
                         }
                     }
@@ -99,30 +127,6 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
             for (int y : conditions.getColumn(actualX, actualZ)) {
                 if (conditions.noise.GetBoolean(actualX, y, actualZ)) {
                     spawnCluster(entry.getValue(), primer, rand, x, y, z, actualX, actualZ);
-                }
-            }
-        }
-    }
-
-    private static void spawnCluster(List<ClusterInfo> clusters, ChunkPrimer primer, Random rand, int x, int y, int z, int actualX, int actualZ) {
-        final IBlockState state = primer.getBlockState(x, y, z);
-        for (ClusterInfo info : clusters) {
-            if (info.cluster.canSpawn(state)) {
-                final BlockPos origin = info.center;
-                final double distX = actualX - origin.getX();
-                final double distY = y - origin.getY();
-                final double distZ = actualZ - origin.getZ();
-                final double distX2 = distX * distX;
-                final double distY2 = distY * distY;
-                final double distZ2 = distZ * distZ;
-
-                // Ensure that we're within the sphere. Note: wall blocks could be && sum >= 0.9
-                if (distX2 / info.radX2 + distY2 / info.radY2 + distZ2 / info.radZ2 <= 1) {
-                    final double chance = info.cluster.integrity();
-                    if (chance == 1.0 || rand.nextFloat() <= chance) {
-                        primer.setBlockState(x, y, z, info.state);
-                        return; // Already placed. Don't continue.
-                    }
                 }
             }
         }
@@ -157,5 +161,7 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
             this.radX2 = radX * radX;
             this.radZ2 = radZ * radZ;
         }
+
     }
+
 }

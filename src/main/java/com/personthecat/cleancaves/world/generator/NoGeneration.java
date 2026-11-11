@@ -7,17 +7,18 @@ import net.minecraft.world.gen.structure.MapGenMineshaft;
 import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
-public class NoGeneration extends MapGenMineshaft {
+public final class NoGeneration extends MapGenMineshaft {
 
     private static final NoGeneration INSTANCE = new NoGeneration();
 
     /** Prevent instantiation. */
-    private NoGeneration() {}
+    private NoGeneration() { }
 
     public static NoGeneration getInstance() {
         return INSTANCE;
     }
 
     @Override
-    public void generate(World worldIn, int x, int z, ChunkPrimer primer) {}
+    public void generate(World worldIn, int x, int z, ChunkPrimer primer) { }
+
 }

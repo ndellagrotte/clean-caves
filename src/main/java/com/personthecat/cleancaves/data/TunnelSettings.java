@@ -11,69 +11,40 @@ import java.util.Optional;
 import static com.personthecat.cleancaves.util.CommonMethods.invert;
 
 /** Vanilla-style winding tunnels, with optional rooms at their origins and nested branches. */
-public record TunnelSettings(
-    ConditionSettings conditions,
-    DecoratorSettings decorators,
-    Range originHeight,
-    boolean noiseYReduction,
-    boolean resizeBranches,
-    Optional<TunnelSettings> branches,
-    Optional<RoomSettings> rooms,
-    ScalableFloat dYaw,
-    ScalableFloat dPitch,
-    ScalableFloat scale,
-    ScalableFloat stretch,
-    ScalableFloat yaw,
-    ScalableFloat pitch,
-    int systemChance,
-    int chance,
-    int systemDensity,
-    int distance,
-    int count,
-    int resolution,
-    Optional<Long> seed,
-    boolean reseedBranches,
-    boolean hasBranches,
-    boolean checkWater
-) {
+public record TunnelSettings(ConditionSettings conditions,
+        DecoratorSettings decorators,
+        Range originHeight,
+        boolean noiseYReduction,
+        boolean resizeBranches,
+        Optional<TunnelSettings> branches,
+        Optional<RoomSettings> rooms,
+        ScalableFloat deltaYaw,
+        ScalableFloat deltaPitch,
+        ScalableFloat scale,
+        ScalableFloat stretch,
+        ScalableFloat yaw,
+        ScalableFloat pitch,
+        int systemChance,
+        int chance,
+        int systemDensity,
+        int distance,
+        int count,
+        int resolution,
+        Optional<Long> seed,
+        boolean reseedBranches,
+        boolean hasBranches,
+        boolean checkWater) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.tunnels;
+    private static final String FEATURE_NAME = CavePreset.Keys.TUNNELS;
 
     /** Default spawn conditions for all tunnel generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(8, 128)).build();
+            .height(Range.of(8, 128))
+            .build();
 
     /** Default decorator settings for all tunnel generators. */
     private static final DecoratorSettings DEFAULT_DECORATORS = DecoratorSettings.DEFAULTS;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String decorators = "decorators";
-        public static final String originHeight = "originHeight";
-        public static final String noiseYReduction = "noiseYReduction";
-        public static final String resizeBranches = "resizeBranches";
-        public static final String branches = "branches";
-        public static final String rooms = "rooms";
-        public static final String dYaw = "dYaw";
-        public static final String dPitch = "dPitch";
-        public static final String scale = "scale";
-        public static final String stretch = "stretch";
-        public static final String yaw = "yaw";
-        public static final String pitch = "pitch";
-        public static final String systemChance = "systemChance";
-        public static final String chance = "chance";
-        public static final String systemDensity = "systemDensity";
-        public static final String distance = "distance";
-        public static final String count = "count";
-        public static final String resolution = "resolution";
-        public static final String seed = "seed";
-        public static final String reseedBranches = "reseedBranches";
-        public static final String hasBranches = "hasBranches";
-        public static final String checkWater = "checkWater";
-
-        private Keys() {}
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -99,33 +70,65 @@ public record TunnelSettings(
         // with, not from any value a preceding mapper wrote.
         final TunnelSettings original = builder.build();
         return new HjsonMapper(json)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, original.conditions)))
-            .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, original.decorators)))
-            .mapRangeOrTry(Keys.originHeight, ConditionSettings.Keys.height, builder::originHeight)
-            .mapBool(Keys.noiseYReduction, builder::noiseYReduction)
-            .mapBool(Keys.resizeBranches, builder::resizeBranches)
-            .mapObject(Keys.branches, o -> builder.branches(Optional.of(from(o))))
-            .mapObject(Keys.rooms, o -> builder.rooms(Optional.of(RoomSettings.from(o))))
-            .mapScalableFloat(Keys.dYaw, original.dYaw, builder::dYaw)
-            .mapScalableFloat(Keys.dPitch, original.dPitch, builder::dPitch)
-            .mapScalableFloat(Keys.scale, original.scale, builder::scale)
-            .mapScalableFloat(Keys.stretch, original.stretch, builder::stretch)
-            .mapScalableFloat(Keys.yaw, original.yaw, builder::yaw)
-            .mapScalableFloat(Keys.pitch, original.pitch, builder::pitch)
-            .mapFloat(Keys.systemChance, f -> builder.systemChance(invert(f)))
-            .mapFloat(Keys.chance, f -> builder.chance(invert(f)))
-            .mapInt(Keys.systemDensity, builder::systemDensity)
-            .mapInt(Keys.distance, builder::distance)
-            .mapInt(Keys.count, builder::count)
-            .mapInt(Keys.resolution, builder::resolution)
-            .mapInt(Keys.seed, i -> builder.seed(Optional.of((long) i)))
-            .mapBool(Keys.reseedBranches, builder::reseedBranches)
-            .mapBool(Keys.hasBranches, builder::hasBranches)
-            .mapBool(Keys.checkWater, builder::checkWater)
-            .release(builder::build);
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, original.conditions)))
+                .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, original.decorators)))
+                .mapRangeOrTry(Keys.ORIGIN_HEIGHT, ConditionSettings.Keys.HEIGHT, builder::originHeight)
+                .mapBool(Keys.NOISE_YREDUCTION, builder::noiseYReduction)
+                .mapBool(Keys.RESIZE_BRANCHES, builder::resizeBranches)
+                .mapObject(Keys.BRANCHES, o -> builder.branches(Optional.of(from(o))))
+                .mapObject(Keys.ROOMS, o -> builder.rooms(Optional.of(RoomSettings.from(o))))
+                .mapScalableFloat(Keys.D_YAW, original.deltaYaw, builder::deltaYaw)
+                .mapScalableFloat(Keys.D_PITCH, original.deltaPitch, builder::deltaPitch)
+                .mapScalableFloat(Keys.SCALE, original.scale, builder::scale)
+                .mapScalableFloat(Keys.STRETCH, original.stretch, builder::stretch)
+                .mapScalableFloat(Keys.YAW, original.yaw, builder::yaw)
+                .mapScalableFloat(Keys.PITCH, original.pitch, builder::pitch)
+                .mapFloat(Keys.SYSTEM_CHANCE, f -> builder.systemChance(invert(f)))
+                .mapFloat(Keys.CHANCE, f -> builder.chance(invert(f)))
+                .mapInt(Keys.SYSTEM_DENSITY, builder::systemDensity)
+                .mapInt(Keys.DISTANCE, builder::distance)
+                .mapInt(Keys.COUNT, builder::count)
+                .mapInt(Keys.RESOLUTION, builder::resolution)
+                .mapInt(Keys.SEED, i -> builder.seed(Optional.of((long) i)))
+                .mapBool(Keys.RESEED_BRANCHES, builder::reseedBranches)
+                .mapBool(Keys.HAS_BRANCHES, builder::hasBranches)
+                .mapBool(Keys.CHECK_WATER, builder::checkWater)
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String DECORATORS = "decorators";
+        public static final String ORIGIN_HEIGHT = "originHeight";
+        public static final String NOISE_YREDUCTION = "noiseYReduction";
+        public static final String RESIZE_BRANCHES = "resizeBranches";
+        public static final String BRANCHES = "branches";
+        public static final String ROOMS = "rooms";
+        public static final String D_YAW = "dYaw";
+        public static final String D_PITCH = "dPitch";
+        public static final String SCALE = "scale";
+        public static final String STRETCH = "stretch";
+        public static final String YAW = "yaw";
+        public static final String PITCH = "pitch";
+        public static final String SYSTEM_CHANCE = "systemChance";
+        public static final String CHANCE = "chance";
+        public static final String SYSTEM_DENSITY = "systemDensity";
+        public static final String DISTANCE = "distance";
+        public static final String COUNT = "count";
+        public static final String RESOLUTION = "resolution";
+        public static final String SEED = "seed";
+        public static final String RESEED_BRANCHES = "reseedBranches";
+        public static final String HAS_BRANCHES = "hasBranches";
+        public static final String CHECK_WATER = "checkWater";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private ConditionSettings conditions = DEFAULT_CONDITIONS;
         private DecoratorSettings decorators = DEFAULT_DECORATORS;
         private Range originHeight = Range.of(8, 128);
@@ -133,8 +136,8 @@ public record TunnelSettings(
         private boolean resizeBranches = true;
         private Optional<TunnelSettings> branches = Optional.empty();
         private Optional<RoomSettings> rooms = Optional.empty();
-        private ScalableFloat dYaw = new ScalableFloat(0.0F, 0.0F, 0.75F, 4.0F, 1.0F);
-        private ScalableFloat dPitch = new ScalableFloat(0.0f, 0.0f, 0.9f, 2.0F, 1.0F);
+        private ScalableFloat deltaYaw = new ScalableFloat(0.0F, 0.0F, 0.75F, 4.0F, 1.0F);
+        private ScalableFloat deltaPitch = new ScalableFloat(0.0f, 0.0f, 0.9f, 2.0F, 1.0F);
         private ScalableFloat scale = new ScalableFloat(0.0F, 1.0F, 1.0F, 0.0F, 1.0F);
         private ScalableFloat stretch = new ScalableFloat(1.0F, 1.0F, 1.0F, 0.0F, 1.0F);
         private ScalableFloat yaw = new ScalableFloat(0.0F, 1.0F, 1.0F, 0.0F, 1.0F);
@@ -150,7 +153,7 @@ public record TunnelSettings(
         private boolean hasBranches = true;
         private boolean checkWater = true;
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -187,13 +190,13 @@ public record TunnelSettings(
             return this;
         }
 
-        public Builder dYaw(ScalableFloat dYaw) {
-            this.dYaw = dYaw;
+        public Builder deltaYaw(ScalableFloat deltaYaw) {
+            this.deltaYaw = deltaYaw;
             return this;
         }
 
-        public Builder dPitch(ScalableFloat dPitch) {
-            this.dPitch = dPitch;
+        public Builder deltaPitch(ScalableFloat deltaPitch) {
+            this.deltaPitch = deltaPitch;
             return this;
         }
 
@@ -268,11 +271,13 @@ public record TunnelSettings(
         }
 
         public TunnelSettings build() {
-            return new TunnelSettings(this.conditions, this.decorators, this.originHeight,
-                this.noiseYReduction, this.resizeBranches, this.branches, this.rooms, this.dYaw,
-                this.dPitch, this.scale, this.stretch, this.yaw, this.pitch, this.systemChance,
-                this.chance, this.systemDensity, this.distance, this.count, this.resolution,
-                this.seed, this.reseedBranches, this.hasBranches, this.checkWater);
+            return new TunnelSettings(this.conditions, this.decorators, this.originHeight, this.noiseYReduction,
+                    this.resizeBranches, this.branches, this.rooms, this.deltaYaw, this.deltaPitch, this.scale,
+                    this.stretch, this.yaw, this.pitch, this.systemChance, this.chance, this.systemDensity,
+                    this.distance, this.count, this.resolution, this.seed, this.reseedBranches, this.hasBranches,
+                    this.checkWater);
         }
+
     }
+
 }

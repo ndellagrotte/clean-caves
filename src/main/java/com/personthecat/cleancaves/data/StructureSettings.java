@@ -5,63 +5,41 @@ import com.personthecat.cleancaves.model.BlockCheck;
 import com.personthecat.cleancaves.model.Direction;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.HjsonMapper;
+import org.hjson.JsonObject;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.gen.structure.template.PlacementSettings;
-import org.hjson.JsonObject;
 
 import java.util.List;
 
 /** An NBT structure template placed against a cave surface. */
-public record StructureSettings(
-    ConditionSettings conditions,
-    String name,
-    PlacementSettings placement,
-    List<IBlockState> matchers,
-    Direction.Container directions,
-    List<BlockPos> airChecks,
-    List<BlockPos> solidChecks,
-    List<BlockPos> nonSolidChecks,
-    List<BlockPos> waterChecks,
-    List<BlockCheck> blockChecks,
-    boolean checkSurface,
-    BlockPos offset,
-    float chance,
-    int count,
-    boolean debugSpawns,
-    String command,
-    boolean rotateRandomly
-) {
+public record StructureSettings(ConditionSettings conditions,
+        String name,
+        PlacementSettings placement,
+        List<IBlockState> matchers,
+        Direction.Container directions,
+        List<BlockPos> airChecks,
+        List<BlockPos> solidChecks,
+        List<BlockPos> nonSolidChecks,
+        List<BlockPos> waterChecks,
+        List<BlockCheck> blockChecks,
+        boolean checkSurface,
+        BlockPos offset,
+        float chance,
+        int count,
+        boolean debugSpawns,
+        String command,
+        boolean rotateRandomly) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.structures;
+    private static final String FEATURE_NAME = CavePreset.Keys.STRUCTURES;
 
     /** Default spawn conditions for all structure generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(10, 50)).build();
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String name = "name";
-        public static final String placement = "placement";
-        public static final String matchers = "matchers";
-        public static final String directions = "directions";
-        public static final String airChecks = "airChecks";
-        public static final String solidChecks = "solidChecks";
-        public static final String nonSolidChecks = "nonSolidChecks";
-        public static final String waterChecks = "waterChecks";
-        public static final String blockChecks = "blockChecks";
-        public static final String checkSurface = "checkSurface";
-        public static final String offset = "offset";
-        public static final String chance = "chance";
-        public static final String count = "count";
-        public static final String debugSpawns = "debugSpawns";
-        public static final String command = "command";
-        public static final String rotateRandomly = "rotateRandomly";
-
-        private Keys() {}
-    }
+            .height(Range.of(10, 50))
+            .build();
 
     public static Builder builder() {
         return new Builder();
@@ -79,27 +57,53 @@ public record StructureSettings(
     private static StructureSettings copyInto(JsonObject json, Builder builder) {
         final ConditionSettings inherited = builder.conditions;
         return new HjsonMapper(json)
-            .mapRequiredString(Keys.name, FEATURE_NAME, builder::name)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inherited)))
-            .mapPlacementSettings(builder::placement)
-            .mapStateList(Keys.matchers, builder::matchers)
-            .mapDirectionList(Keys.directions, l -> builder.directions(Direction.Container.from(l)))
-            .mapBlockPosList(Keys.airChecks, builder::airChecks)
-            .mapBlockPosList(Keys.solidChecks, builder::solidChecks)
-            .mapBlockPosList(Keys.nonSolidChecks, builder::nonSolidChecks)
-            .mapBlockPosList(Keys.waterChecks, builder::waterChecks)
-            .mapValueArray(Keys.blockChecks, BlockCheck::fromValue, builder::blockChecks)
-            .mapBool(Keys.checkSurface, builder::checkSurface)
-            .mapBlockPos(Keys.offset, builder::offset)
-            .mapFloat(Keys.chance, builder::chance)
-            .mapInt(Keys.count, builder::count)
-            .mapBool(Keys.debugSpawns, builder::debugSpawns)
-            .mapString(Keys.command, builder::command)
-            .mapBool(Keys.rotateRandomly, builder::rotateRandomly)
-            .release(builder::build);
+                .mapRequiredString(Keys.NAME, FEATURE_NAME, builder::name)
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inherited)))
+                .mapPlacementSettings(builder::placement)
+                .mapStateList(Keys.MATCHERS, builder::matchers)
+                .mapDirectionList(Keys.DIRECTIONS, l -> builder.directions(Direction.Container.from(l)))
+                .mapBlockPosList(Keys.AIR_CHECKS, builder::airChecks)
+                .mapBlockPosList(Keys.SOLID_CHECKS, builder::solidChecks)
+                .mapBlockPosList(Keys.NON_SOLID_CHECKS, builder::nonSolidChecks)
+                .mapBlockPosList(Keys.WATER_CHECKS, builder::waterChecks)
+                .mapValueArray(Keys.BLOCK_CHECKS, BlockCheck::fromValue, builder::blockChecks)
+                .mapBool(Keys.CHECK_SURFACE, builder::checkSurface)
+                .mapBlockPos(Keys.OFFSET, builder::offset)
+                .mapFloat(Keys.CHANCE, builder::chance)
+                .mapInt(Keys.COUNT, builder::count)
+                .mapBool(Keys.DEBUG_SPAWNS, builder::debugSpawns)
+                .mapString(Keys.COMMAND, builder::command)
+                .mapBool(Keys.ROTATE_RANDOMLY, builder::rotateRandomly)
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String NAME = "name";
+        public static final String PLACEMENT = "placement";
+        public static final String MATCHERS = "matchers";
+        public static final String DIRECTIONS = "directions";
+        public static final String AIR_CHECKS = "airChecks";
+        public static final String SOLID_CHECKS = "solidChecks";
+        public static final String NON_SOLID_CHECKS = "nonSolidChecks";
+        public static final String WATER_CHECKS = "waterChecks";
+        public static final String BLOCK_CHECKS = "blockChecks";
+        public static final String CHECK_SURFACE = "checkSurface";
+        public static final String OFFSET = "offset";
+        public static final String CHANCE = "chance";
+        public static final String COUNT = "count";
+        public static final String DEBUG_SPAWNS = "debugSpawns";
+        public static final String COMMAND = "command";
+        public static final String ROTATE_RANDOMLY = "rotateRandomly";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         ConditionSettings conditions = DEFAULT_CONDITIONS;
         /** Required -- {@code mapRequiredString} throws if the preset omits it. */
         private String name;
@@ -119,7 +123,7 @@ public record StructureSettings(
         private String command = "";
         private boolean rotateRandomly = false;
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -207,10 +211,12 @@ public record StructureSettings(
         }
 
         public StructureSettings build() {
-            return new StructureSettings(this.conditions, this.name, this.placement, this.matchers,
-                this.directions, this.airChecks, this.solidChecks, this.nonSolidChecks,
-                this.waterChecks, this.blockChecks, this.checkSurface, this.offset, this.chance,
-                this.count, this.debugSpawns, this.command, this.rotateRandomly);
+            return new StructureSettings(this.conditions, this.name, this.placement, this.matchers, this.directions,
+                    this.airChecks, this.solidChecks, this.nonSolidChecks, this.waterChecks, this.blockChecks,
+                    this.checkSurface, this.offset, this.chance, this.count, this.debugSpawns, this.command,
+                    this.rotateRandomly);
         }
+
     }
+
 }

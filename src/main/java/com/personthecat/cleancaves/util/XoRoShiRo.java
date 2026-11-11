@@ -13,8 +13,10 @@ public class XoRoShiRo extends Random {
 
     private SplitMixRandom mixer;
     private long seed = Long.MIN_VALUE;
-    private long p0, p1; // The initialization words for the current seed
-    private long s0, s1; // The current random words
+    private long p0;
+    private long p1; // The initialization words for the current seed
+    private long s0;
+    private long s1; // The current random words
     private boolean hasSavedState; // True if we can be quickly reseed by using resetting the words
 
     public XoRoShiRo(final long seed) {
@@ -43,24 +45,6 @@ public class XoRoShiRo extends Random {
         return (int) this.nextBounded(n);
     }
 
-    private long nextBounded(final long n) {
-        if (n <= 0) {
-            throw new IllegalArgumentException("illegal bound " + n + " (must be positive)");
-        }
-        long t = this.nextLong();
-        final long nMinus1 = n - 1;
-        // Shortcut for powers of two--high bits
-        if ((n & nMinus1) == 0) {
-            return (t >>> Long.numberOfLeadingZeros(nMinus1)) & nMinus1;
-        }
-        // Rejection-based algorithm to get uniform integers in the general case
-        long u = t >>> 1;
-        while (u + nMinus1 - (t = u % n) < 0) {
-            u = this.nextLong() >>> 1;
-        }
-        return t;
-    }
-
     @Override
     public double nextDouble() {
         return Double.longBitsToDouble(0x3FFL << 52 | this.nextLong() >>> 12) - 1.0;
@@ -78,7 +62,8 @@ public class XoRoShiRo extends Random {
 
     @Override
     public void nextBytes(final byte[] bytes) {
-        int i = bytes.length, n;
+        int i = bytes.length;
+        int n;
         while (i != 0) {
             n = Math.min(i, 8);
             for (long bits = this.nextLong(); n-- != 0; bits >>= 8) {
@@ -110,4 +95,23 @@ public class XoRoShiRo extends Random {
             this.hasSavedState = true;
         }
     }
+
+    private long nextBounded(final long n) {
+        if (n <= 0) {
+            throw new IllegalArgumentException("illegal bound " + n + " (must be positive)");
+        }
+        long t = this.nextLong();
+        final long nMinus1 = n - 1;
+        // Shortcut for powers of two--high bits
+        if ((n & nMinus1) == 0) {
+            return (t >>> Long.numberOfLeadingZeros(nMinus1)) & nMinus1;
+        }
+        // Rejection-based algorithm to get uniform integers in the general case
+        long u = t >>> 1;
+        while (u + nMinus1 - (t = u % n) < 0) {
+            u = this.nextLong() >>> 1;
+        }
+        return t;
+    }
+
 }

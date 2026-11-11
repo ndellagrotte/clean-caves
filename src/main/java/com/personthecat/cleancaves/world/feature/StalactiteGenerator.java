@@ -3,12 +3,13 @@ package com.personthecat.cleancaves.world.feature;
 import com.personthecat.cleancaves.data.StalactiteSettings;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.XoRoShiRo;
+
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Random;
+import javax.annotation.ParametersAreNonnullByDefault;
 
 @ParametersAreNonnullByDefault
 public class StalactiteGenerator extends FeatureGenerator {
@@ -33,11 +34,101 @@ public class StalactiteGenerator extends FeatureGenerator {
      * Higher frequency -> higher resolution -> lower distance.
      */
     private static int calculateResolution(double chance) {
-        if (chance < 0.25) return 16; // 00 to 25 -> 1x / chunk
-        if (chance < 0.35) return 8;  // 25 to 35 -> 4x / chunk
-        if (chance < 0.55) return 4;  // 35 to 55 -> 16x / chunk
-        if (chance < 0.75) return 2;  // 55 to 75 -> 64x / chunk
-        return 1;                     // 75 to 100 -> 256x / chunk
+        if (chance < 0.25) {
+            return 16; // 00 to 25 -> 1x / chunk
+        }
+        if (chance < 0.35) {
+            return 8; // 25 to 35 -> 4x / chunk
+        }
+        if (chance < 0.55) {
+            return 4; // 35 to 55 -> 16x / chunk
+        }
+        if (chance < 0.75) {
+            return 2; // 55 to 75 -> 64x / chunk
+        }
+        return 1; // 75 to 100 -> 256x / chunk
+    }
+
+    private static BlockPos[] sidePositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x, y, z - 1), // North
+                new BlockPos(x, y, z + 1), // South
+                new BlockPos(x + 1, y, z), // East
+                new BlockPos(x - 1, y, z) // West
+        };
+    }
+
+    private static BlockPos[] cornerPositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x + 1, y, z - 1), // Northeast
+                new BlockPos(x + 1, y, z + 1), // Southeast
+                new BlockPos(x - 1, y, z + 1), // Southwest
+                new BlockPos(x - 1, y, z - 1) // Northwest
+        };
+    }
+
+    private static BlockPos[] middleSidePositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x, y, z - 2), // North
+                new BlockPos(x, y, z + 2), // South
+                new BlockPos(x + 2, y, z), // East
+                new BlockPos(x - 2, y, z) // West
+        };
+    }
+
+    private static BlockPos[] middleCornerPositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x + 2, y, z + 1), new BlockPos(x + 2, y, z - 1), new BlockPos(x - 2, y, z + 1),
+                new BlockPos(x - 2, y, z - 1), new BlockPos(x + 1, y, z + 2), new BlockPos(x - 1, y, z + 2),
+                new BlockPos(x + 1, y, z - 2), new BlockPos(x - 1, y, z - 2)
+        };
+    }
+
+    private static BlockPos[] outerSidePositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x, y, z - 3), // North
+                new BlockPos(x, y, z + 3), // South
+                new BlockPos(x + 3, y, z), // East
+                new BlockPos(x - 3, y, z) // West
+        };
+    }
+
+    private static BlockPos[] outerBetweenPositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x + 2, y, z - 2), // Northeast
+                new BlockPos(x + 2, y, z + 2), // Southeast
+                new BlockPos(x - 2, y, z + 2), // Southwest
+                new BlockPos(x - 2, y, z - 2) // Northwest
+        };
+    }
+
+    private static BlockPos[] outerCornerPositions(BlockPos pos) {
+        final int x = pos.getX();
+        final int y = pos.getY();
+        final int z = pos.getZ();
+        return new BlockPos[] {
+                new BlockPos(x + 1, y, z + 3), new BlockPos(x + 3, y, z + 1), new BlockPos(x + 3, y, z - 1),
+                new BlockPos(x + 1, y, z - 3), new BlockPos(x - 1, y, z - 3), new BlockPos(x - 3, y, z - 1),
+                new BlockPos(x - 3, y, z + 1), new BlockPos(x - 1, y, z + 3)
+        };
     }
 
     @Override
@@ -68,10 +159,13 @@ public class StalactiteGenerator extends FeatureGenerator {
                 final Range height = conditions.getColumn(dx, dz);
                 if (height.diff() != 0 && conditions.region.GetBoolean(dz, dz)) {
                     final int maxY = Math.min(info.heightmap[dx & 15][dz & 15] - SURFACE_ROOM, height.max());
-                    if (maxY <= height.min()) continue;
+                    if (maxY <= height.min()) {
+                        continue;
+                    }
 
-                    final int y = this.stalactite ? this.findCeiling(info.world, dx, height.min(), dz, maxY)
-                        : this.findFloor(info.world, dx, maxY, dz, height.min());
+                    final int y = this.stalactite
+                            ? this.findCeiling(info.world, dx, height.min(), dz, maxY)
+                            : this.findFloor(info.world, dx, maxY, dz, height.min());
 
                     if (y != NONE_FOUND && conditions.noise.GetBoolean(dx, y, dz)) {
                         final BlockPos pos = new BlockPos(dx, y, dz);
@@ -154,81 +248,4 @@ public class StalactiteGenerator extends FeatureGenerator {
         }
     }
 
-    private static BlockPos[] sidePositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x, y, z - 1), // North
-            new BlockPos(x, y, z + 1), // South
-            new BlockPos(x + 1, y, z), // East
-            new BlockPos(x - 1, y, z)  // West
-        };
-    }
-
-    private static BlockPos[] cornerPositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x + 1, y, z - 1), // Northeast
-            new BlockPos(x + 1, y, z + 1), // Southeast
-            new BlockPos(x - 1, y, z + 1), // Southwest
-            new BlockPos(x - 1, y, z - 1)  // Northwest
-        };
-    }
-
-    private static BlockPos[] middleSidePositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x, y, z - 2), // North
-            new BlockPos(x, y, z + 2), // South
-            new BlockPos(x + 2, y, z), // East
-            new BlockPos(x - 2, y, z)  // West
-        };
-    }
-
-    private static BlockPos[] middleCornerPositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x + 2, y, z + 1),
-            new BlockPos(x + 2, y, z - 1),
-            new BlockPos(x - 2, y, z + 1),
-            new BlockPos(x - 2, y, z - 1),
-            new BlockPos(x + 1, y, z + 2),
-            new BlockPos(x - 1, y, z + 2),
-            new BlockPos(x + 1, y, z - 2),
-            new BlockPos(x - 1, y, z - 2)
-        };
-    }
-
-    private static BlockPos[] outerSidePositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x, y, z - 3), // North
-            new BlockPos(x, y, z + 3), // South
-            new BlockPos(x + 3, y, z), // East
-            new BlockPos(x - 3, y, z)  // West
-        };
-    }
-
-    private static BlockPos[] outerBetweenPositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x + 2, y, z - 2), // Northeast
-            new BlockPos(x + 2, y, z + 2), // Southeast
-            new BlockPos(x - 2, y, z + 2), // Southwest
-            new BlockPos(x - 2, y, z - 2)  // Northwest
-        };
-    }
-
-    private static BlockPos[] outerCornerPositions(BlockPos pos) {
-        final int x = pos.getX(), y = pos.getY(), z = pos.getZ();
-        return new BlockPos[] {
-            new BlockPos(x + 1, y, z + 3),
-            new BlockPos(x + 3, y, z + 1),
-            new BlockPos(x + 3, y, z - 1),
-            new BlockPos(x + 1, y, z - 3),
-            new BlockPos(x - 1, y, z - 3),
-            new BlockPos(x - 3, y, z - 1),
-            new BlockPos(x - 3, y, z + 1),
-            new BlockPos(x - 1, y, z + 3)
-        };
-    }
 }

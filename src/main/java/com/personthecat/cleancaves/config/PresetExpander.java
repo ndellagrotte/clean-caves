@@ -8,19 +8,22 @@ import org.hjson.JsonObject;
 import org.hjson.JsonValue;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import static com.personthecat.cleancaves.util.CommonMethods.runEx;
+import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 import static com.personthecat.cleancaves.util.HjsonTools.asOrToArray;
 import static com.personthecat.cleancaves.util.HjsonTools.getArray;
 import static com.personthecat.cleancaves.util.HjsonTools.getObject;
 import static com.personthecat.cleancaves.util.HjsonTools.getObjectOrNew;
 import static com.personthecat.cleancaves.util.HjsonTools.setOrAdd;
-import static com.personthecat.cleancaves.util.CommonMethods.runEx;
-import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
-public class PresetExpander {
+public final class PresetExpander {
 
     /** The name of the imports array at the top of any preset file. */
     public static final String IMPORTS = "imports";
@@ -37,6 +40,8 @@ public class PresetExpander {
     /** The keyword used for merging every field in an object. */
     public static final Pattern MERGE_ALL = Pattern.compile("all", Pattern.CASE_INSENSITIVE);
 
+    private PresetExpander() { }
+
     /**
      * Expands all of the variable definitions and imports into concrete data.
      *
@@ -47,7 +52,11 @@ public class PresetExpander {
         // Automatically copy variables to the root level in imports.
         definitions.forEach((f, json) -> variablesToRoot(json));
         // Replace inner references so that invalid keys do not get copied out.
-        definitions.forEach((f, json) -> { if (!json.has(IMPORTS)) expand(json); });
+        definitions.forEach((f, json) -> {
+            if (!json.has(IMPORTS)) {
+                expand(json);
+            }
+        });
         // Enable imports to uniquely import each other. This is checked later.
         definitions.forEach((f, json) -> copyImports(definitions, json, true));
         // Expand any variables used inside of each import.
@@ -64,6 +73,72 @@ public class PresetExpander {
         presets.forEach((f, json) -> calculateAll(json));
         // Delete all of the now unneeded imports and variables.
         presets.forEach((f, json) -> deleteUnused(json));
+    }
+
+    /**
+     * Evaluates any arithmetic expressions inside of a JSON object.
+     *
+     * <p>
+     *  For example, given this object: <pre>
+     *    test: {
+     *      exp: ((2 + 2) * 2) ^ 2
+     *    }
+     * </pre>
+     *  This will be the output: <pre>
+     *    test: {
+     *      exp: 64.0
+     *    }
+     * </pre>
+     *
+     * <p>
+     * Remember that these objects are evaluated in place, and as such,
+     * the original contents are destroyed.
+     *
+     * @param json An object which may or may not contain expressions.
+     */
+    public static void calculateAll(JsonObject json) {
+        final JsonObject clone = new JsonObject();
+        for (JsonObject.Member member : json) {
+            final String name = member.getName();
+            final JsonValue value = member.getValue();
+            if (value.isString()) {
+                final String exp = value.asString();
+                if (Calculator.isExpression(exp)) {
+                    clone.add(name, Calculator.evaluate(value.asString()));
+                    continue;
+                }
+            } else if (value.isObject()) {
+                calculateAll(value.asObject());
+            } else if (value.isArray()) {
+                calculateAll(value.asArray());
+            }
+            clone.add(name, value);
+        }
+        replaceContents(clone, json);
+    }
+
+    /**
+     * Evaluates any arithmetic expressions inside of a JSON array.
+     *
+     * @param json An array which may or may not contain expressions.
+     */
+    public static void calculateAll(JsonArray json) {
+        final JsonArray clone = new JsonArray();
+        for (JsonValue value : json) {
+            if (value.isString()) {
+                final String exp = value.asString();
+                if (Calculator.isExpression(exp)) {
+                    clone.add(Calculator.evaluate(value.asString()));
+                    continue;
+                }
+            } else if (value.isObject()) {
+                calculateAll(value.asObject());
+            } else if (value.isArray()) {
+                calculateAll(value.asArray());
+            }
+            clone.add(value);
+        }
+        replaceContents(clone, json);
     }
 
     /**
@@ -164,8 +239,8 @@ public class PresetExpander {
      */
     private static void copyVanilla(Map<Path, JsonObject> presets, Map<Path, JsonObject> definitions) {
         // This should not be possible anyway.
-        final JsonObject vanilla = getDefaults(definitions)
-            .orElseThrow(() -> runEx(DEFAULTS + " may not be renamed or deleted."));
+        final JsonObject vanilla = getDefaults(definitions).orElseThrow(() -> runEx(DEFAULTS
+                        + " may not be renamed or deleted."));
         // Add this value implicitly in every preset.
         // It will be removed if unused.
         for (JsonObject json : presets.values()) {
@@ -198,8 +273,7 @@ public class PresetExpander {
      * @param json The JSON object to be expanded.
      */
     private static void expandVariables(JsonObject json) {
-        final JsonObject variables = getObject(json, VARIABLES)
-            .orElseThrow(() -> runEx("Nothing to expand."));
+        final JsonObject variables = getObject(json, VARIABLES).orElseThrow(() -> runEx("Nothing to expand."));
         expand(variables);
         copyObject(variables, json);
         mergeObject(variables, json);
@@ -341,9 +415,9 @@ public class PresetExpander {
                 if (path.length == 1) {
                     forEachParent(json, recursiveKey, o -> o.set(recursiveKey, value));
                 } else {
-                    HjsonTools.forEachRecursive(json, recursiveKey, o ->
-                        HjsonTools.forEachAtPath(o, c -> c.set(path[path.length - 1], value),
-                            ArrayUtils.subarray(path, 1, path.length - 1)));
+                    HjsonTools.forEachRecursive(json, recursiveKey,
+                            o -> HjsonTools.forEachAtPath(o, c -> c.set(path[path.length - 1], value),
+                                    ArrayUtils.subarray(path, 1, path.length - 1)));
                 }
             } else {
                 clone.add(name, value);
@@ -458,72 +532,6 @@ public class PresetExpander {
     }
 
     /**
-     * Evaluates any arithmetic expressions inside of a JSON object.
-     *
-     * <p>
-     *  For example, given this object: <pre>
-     *    test: {
-     *      exp: ((2 + 2) * 2) ^ 2
-     *    }
-     * </pre>
-     *  This will be the output: <pre>
-     *    test: {
-     *      exp: 64.0
-     *    }
-     * </pre>
-     *
-     * <p>
-     * Remember that these objects are evaluated in place, and as such,
-     * the original contents are destroyed.
-     *
-     * @param json An object which may or may not contain expressions.
-     */
-    public static void calculateAll(JsonObject json) {
-        final JsonObject clone = new JsonObject();
-        for (JsonObject.Member member : json) {
-            final String name = member.getName();
-            final JsonValue value = member.getValue();
-            if (value.isString()) {
-                final String exp = value.asString();
-                if (Calculator.isExpression(exp)) {
-                    clone.add(name, Calculator.evaluate(value.asString()));
-                    continue;
-                }
-            } else if (value.isObject()) {
-                calculateAll(value.asObject());
-            } else if (value.isArray()) {
-                calculateAll(value.asArray());
-            }
-            clone.add(name, value);
-        }
-        replaceContents(clone, json);
-    }
-
-    /**
-     * Evaluates any arithmetic expressions inside of a JSON array.
-     *
-     * @param json An array which may or may not contain expressions.
-     */
-    public static void calculateAll(JsonArray json) {
-        final JsonArray clone = new JsonArray();
-        for (JsonValue value : json) {
-            if (value.isString()) {
-                final String exp = value.asString();
-                if (Calculator.isExpression(exp)) {
-                    clone.add(Calculator.evaluate(value.asString()));
-                    continue;
-                }
-            } else if (value.isObject()) {
-                calculateAll(value.asObject());
-            } else if (value.isArray()) {
-                calculateAll(value.asArray());
-            }
-            clone.add(value);
-        }
-        replaceContents(clone, json);
-    }
-
-    /**
      * Copies every JSON member from one JSON to another.
      *
      * @param from The JSON object to copy from.
@@ -554,4 +562,5 @@ public class PresetExpander {
         json.remove(IMPORTS);
         json.remove(VARIABLES);
     }
+
 }

@@ -4,9 +4,11 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class CachedNoiseHelper {
+public final class CachedNoiseHelper {
 
     private static final Map<Integer, Cache> DATA = new ConcurrentHashMap<>();
+
+    private CachedNoiseHelper() { }
 
     public static Cache getOrCreate(int hash) {
         final Cache pull = DATA.get(hash);
@@ -35,6 +37,7 @@ public class CachedNoiseHelper {
      * have the chance to occur.
      */
     public static class Cache {
+
         private final float[] output3 = new float[16 * 16 * 256];
         private final float[] output2 = new float[16 * 16];
 
@@ -58,6 +61,7 @@ public class CachedNoiseHelper {
             Arrays.fill(output3, 0F);
             Arrays.fill(output2, 0F);
         }
+
     }
 
 }

@@ -18,4 +18,5 @@ public interface IProxy {
 
     /** As {@link #chatHeight}, for chat width. */
     Optional<String> chatWidth(String[] args);
+
 }

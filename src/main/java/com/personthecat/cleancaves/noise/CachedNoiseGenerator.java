@@ -67,4 +67,5 @@ public class CachedNoiseGenerator extends FastNoise {
         cache.writeNoise(relX, relY, relZ, noise);
         return noise;
     }
+
 }

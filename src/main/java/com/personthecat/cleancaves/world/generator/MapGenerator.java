@@ -8,6 +8,7 @@ import com.personthecat.cleancaves.model.PrimerData;
 import com.personthecat.cleancaves.util.PositionFlags;
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import com.personthecat.cleancaves.world.BiomeSearch;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
@@ -59,7 +60,8 @@ public abstract class MapGenerator extends WorldCarver {
 
     private void fillInvalidChunks(BiomeSearch biomes) {
         for (BiomeSearch.Data d : biomes.surrounding.get()) {
-            if (!(this.conditions.biomes.test(d.biome()) && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
+            if (!(this.conditions.biomes.test(d.biome())
+                    && this.conditions.region.GetBoolean(d.centerX(), d.centerZ()))) {
                 this.invalidChunks.add(new BlockPos(d.centerX(), 0, d.centerZ()));
             }
         }
@@ -67,10 +69,10 @@ public abstract class MapGenerator extends WorldCarver {
 
     private void fillInvalidChunks(int chunkX, int chunkZ) {
         final int range = ConfigFile.biomeRange;
-        for (int cX = chunkX - range; cX <= chunkX + range; cX++) {
-            for (int cZ = chunkZ - range; cZ < chunkZ + range; cZ++) {
-                final int centerX = cX * 16 + 8;
-                final int centerZ = cZ * 16 + 8;
+        for (int cx = chunkX - range; cx <= chunkX + range; cx++) {
+            for (int cz = chunkZ - range; cz < chunkZ + range; cz++) {
+                final int centerX = cx * 16 + 8;
+                final int centerZ = cz * 16 + 8;
                 if (!this.conditions.region.GetBoolean(centerX, centerZ)) {
                     this.invalidChunks.add(new BlockPos(centerX, 0, centerZ));
                 }
@@ -87,9 +89,9 @@ public abstract class MapGenerator extends WorldCarver {
 
         for (int destX = ctx.chunkX - range; destX <= ctx.chunkX + range; destX++) {
             for (int destZ = ctx.chunkZ - range; destZ <= ctx.chunkZ + range; destZ++) {
-                long xHash = (long) destX * xMask;
-                long zHash = (long) destZ * zMask;
-                this.rand.setSeed(xHash ^ zHash ^ ctx.world.getSeed());
+                long hashX = (long) destX * xMask;
+                long hashZ = (long) destZ * zMask;
+                this.rand.setSeed(hashX ^ hashZ ^ ctx.world.getSeed());
                 this.mapGenerate(new MapGenerationContext(ctx, rand, destX, destZ));
             }
         }
@@ -110,7 +112,7 @@ public abstract class MapGenerator extends WorldCarver {
     }
 
     protected final void generateSphere(PrimerData data, World world, Random rand, double x, double y, double z,
-            double rXZ, double rY, double roXZ, double roY) {
+            double radXZ, double radY, double roXZ, double roY) {
         final int miX = limitXZ(MathHelper.floor(x - roXZ) - data.absX() - 1);
         final int maX = limitXZ(MathHelper.floor(x + roXZ) - data.absX() + 1);
         final int miY = limitY(MathHelper.floor(y - roY) - 1);
@@ -121,10 +123,11 @@ public abstract class MapGenerator extends WorldCarver {
         this.sphere.reset();
         this.sphere.grow(maX - miX, maY - miY, maZ - miZ);
 
-        if (roXZ - rXZ != 0 && rand.nextInt(decorators.shell.cfg.sphereResolution() ) == 0) {
-            this.fillDouble(this.sphere, x, y, z, data.absX(), data.absZ(), rXZ, rY, roXZ, roY, miX, maX, miY, maY, miZ, maZ);
+        if (roXZ - radXZ != 0 && rand.nextInt(decorators.shell.cfg.sphereResolution()) == 0) {
+            this.fillDouble(this.sphere, x, y, z, data.absX(), data.absZ(), radXZ, radY, roXZ, roY, miX, maX, miY, maY,
+                    miZ, maZ);
         } else {
-            this.fillSphere(this.sphere, x, y, z, data.absX(), data.absZ(), rXZ, rY, miX, maX, miY, maY, miZ, maZ);
+            this.fillSphere(this.sphere, x, y, z, data.absX(), data.absZ(), radXZ, radY, miX, maX, miY, maY, miZ, maZ);
         }
 
         // If we need to test this section for water -> is there water?
@@ -146,12 +149,12 @@ public abstract class MapGenerator extends WorldCarver {
     }
 
     /** Provides reusable instructions on where to place and decorate blocks. */
-    protected abstract void fillSphere(SphereData sphere, double cX, double cY, double cZ, int absX, int absZ,
-        double rXZ, double rY, int miX, int maX, int miY, int maY, int miZ, int maZ);
+    protected abstract void fillSphere(SphereData sphere, double cx, double cy, double cz, int absX, int absZ,
+            double radXZ, double radY, int miX, int maX, int miY, int maY, int miZ, int maZ);
 
     /** Variant of #fillSphere which includes an outer shell. This is more expensive. */
-    protected abstract void fillDouble(SphereData sphere, double cX, double cY, double cZ, int absX, int absZ,
-        double rXZ, double rY, double roXZ, double roY, int miX, int maX, int miY, int maY, int miZ, int maZ);
+    protected abstract void fillDouble(SphereData sphere, double cx, double cy, double cz, int absX, int absZ,
+            double radXZ, double radY, double roXZ, double roY, int miX, int maX, int miY, int maY, int miZ, int maZ);
 
     /** Calculates the maximum distance for this tunnel, if needed. */
     protected int getDistance(Random rand, int input) {
@@ -172,8 +175,7 @@ public abstract class MapGenerator extends WorldCarver {
         for (ConfiguredCaveBlock block : decorators.caveBlocks) {
             if (block.cfg.states().contains(BLK_WATER)) {
                 if (maY <= block.cfg.height().max() + WATER_WIGGLE_ROOM
-                    && miY >= block.cfg.height().min() - WATER_WIGGLE_ROOM)
-                {
+                        && miY >= block.cfg.height().min() - WATER_WIGGLE_ROOM) {
                     return false;
                 }
             }
@@ -187,8 +189,8 @@ public abstract class MapGenerator extends WorldCarver {
     }
 
     /** Replaces all of the blocks around the current sphere, if applicable. */
-    protected void generateShell(PrimerData data, Random rand, PositionFlags sphere, int cY) {
-        sphere.forEach((x, y, z) -> this.generateShell(rand, data.p(), x, y, z, cY, data.chunkX(), data.chunkZ()));
+    protected void generateShell(PrimerData data, Random rand, PositionFlags sphere, int cy) {
+        sphere.forEach((x, y, z) -> this.generateShell(rand, data.p(), x, y, z, cy, data.chunkX(), data.chunkZ()));
     }
 
     /** Replaces all blocks inside of this section. */
@@ -201,7 +203,8 @@ public abstract class MapGenerator extends WorldCarver {
         sphere.forEach((x, y, z) -> this.decorateBlock(rand, data.p(), x, y, z, data.chunkX(), data.chunkZ()));
     }
 
-    protected static class MapGenerationContext {
+    protected static final class MapGenerationContext {
+
         protected final int[][] heightmap;
         protected final World world;
         protected final Random rand;
@@ -225,5 +228,7 @@ public abstract class MapGenerator extends WorldCarver {
             this.offsetZ = ctx.offsetZ;
             this.primer = ctx.primer;
         }
+
     }
+
 }

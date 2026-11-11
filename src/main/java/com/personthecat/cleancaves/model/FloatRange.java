@@ -19,4 +19,5 @@ public record FloatRange(float min, float max) {
     public String toString() {
         return f("Range[{}~{}]", this.min, this.max);
     }
+
 }

@@ -1,12 +1,15 @@
 package com.personthecat.cleancaves.world.event;
 
 import com.personthecat.cleancaves.config.ConfigFile;
+
 import net.minecraftforge.event.terraingen.OreGenEvent.GenerateMinable;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 /** Presets usually place their own stone variants, so vanilla's are off by default. */
-public class DisableVanillaStoneGen {
+public final class DisableVanillaStoneGen {
+
+    private DisableVanillaStoneGen() { }
 
     /** Disables generation of vanilla stone veins. */
     @SubscribeEvent
@@ -19,4 +22,5 @@ public class DisableVanillaStoneGen {
             }
         }
     }
+
 }

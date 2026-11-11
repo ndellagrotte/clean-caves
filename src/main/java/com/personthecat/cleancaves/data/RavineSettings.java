@@ -9,57 +9,34 @@ import org.hjson.JsonObject;
 import static com.personthecat.cleancaves.util.CommonMethods.invert;
 
 /** Vanilla-style ravines, optionally with noise-driven wall irregularity. */
-public record RavineSettings(
-    ConditionSettings conditions,
-    DecoratorSettings decorators,
-    Range originHeight,
-    float noiseYFactor,
-    ScalableFloat dYaw,
-    ScalableFloat dPitch,
-    ScalableFloat scale,
-    ScalableFloat stretch,
-    ScalableFloat yaw,
-    ScalableFloat pitch,
-    int distance,
-    int chance,
-    int resolution,
-    double cutoffStrength,
-    boolean useWallNoise,
-    boolean checkWater,
-    NoiseMapSettings walls
-) {
+public record RavineSettings(ConditionSettings conditions,
+        DecoratorSettings decorators,
+        Range originHeight,
+        float noiseYFactor,
+        ScalableFloat deltaYaw,
+        ScalableFloat deltaPitch,
+        ScalableFloat scale,
+        ScalableFloat stretch,
+        ScalableFloat yaw,
+        ScalableFloat pitch,
+        int distance,
+        int chance,
+        int resolution,
+        double cutoffStrength,
+        boolean useWallNoise,
+        boolean checkWater,
+        NoiseMapSettings walls) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.ravines;
+    private static final String FEATURE_NAME = CavePreset.Keys.RAVINES;
 
     /** Default spawn conditions for all ravine generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(20, 66)).build();
+            .height(Range.of(20, 66))
+            .build();
 
     /** Default decorator settings for all ravine generators. */
     private static final DecoratorSettings DEFAULT_DECORATORS = DecoratorSettings.DEFAULTS;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String decorators = "decorators";
-        public static final String originHeight = "originHeight";
-        public static final String noiseYFactor = "noiseYFactor";
-        public static final String dYaw = "dYaw";
-        public static final String dPitch = "dPitch";
-        public static final String scale = "scale";
-        public static final String stretch = "stretch";
-        public static final String yaw = "yaw";
-        public static final String pitch = "pitch";
-        public static final String distance = "distance";
-        public static final String chance = "chance";
-        public static final String resolution = "resolution";
-        public static final String cutoffStrength = "cutoffStrength";
-        public static final String useWallNoise = "useWallNoise";
-        public static final String checkWater = "checkWater";
-        public static final String walls = "walls";
-
-        private Keys() {}
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -78,35 +55,60 @@ public record RavineSettings(
     private static RavineSettings copyInto(JsonObject json, Builder builder) {
         final RavineSettings original = builder.build();
         return new HjsonMapper(json)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, original.conditions)))
-            .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, original.decorators)))
-            .mapRangeOrTry(Keys.originHeight, ConditionSettings.Keys.height, builder::originHeight)
-            .mapFloat(Keys.noiseYFactor, builder::noiseYFactor)
-            .mapScalableFloat(Keys.dYaw, original.dYaw, builder::dYaw)
-            .mapScalableFloat(Keys.dPitch, original.dPitch, builder::dPitch)
-            .mapScalableFloat(Keys.scale, original.scale, builder::scale)
-            .mapScalableFloat(Keys.stretch, original.stretch, builder::stretch)
-            .mapScalableFloat(Keys.yaw, original.yaw, builder::yaw)
-            .mapScalableFloat(Keys.pitch, original.pitch, builder::pitch)
-            .mapInt(Keys.distance, builder::distance)
-            .mapFloat(Keys.chance, f -> builder.chance(invert(f)))
-            .mapInt(Keys.resolution, builder::resolution)
-            .mapFloat(Keys.cutoffStrength, builder::cutoffStrength)
-            // Declaring a walls object is itself what turns wall noise on.
-            .mapObject(Keys.walls, o ->
-                builder.useWallNoise(true).walls(NoiseMapSettings.from(o, original.walls)))
-            .mapBool(Keys.useWallNoise, builder::useWallNoise)
-            .mapBool(Keys.checkWater, builder::checkWater)
-            .release(builder::build);
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, original.conditions)))
+                .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, original.decorators)))
+                .mapRangeOrTry(Keys.ORIGIN_HEIGHT, ConditionSettings.Keys.HEIGHT, builder::originHeight)
+                .mapFloat(Keys.NOISE_YFACTOR, builder::noiseYFactor)
+                .mapScalableFloat(Keys.D_YAW, original.deltaYaw, builder::deltaYaw)
+                .mapScalableFloat(Keys.D_PITCH, original.deltaPitch, builder::deltaPitch)
+                .mapScalableFloat(Keys.SCALE, original.scale, builder::scale)
+                .mapScalableFloat(Keys.STRETCH, original.stretch, builder::stretch)
+                .mapScalableFloat(Keys.YAW, original.yaw, builder::yaw)
+                .mapScalableFloat(Keys.PITCH, original.pitch, builder::pitch)
+                .mapInt(Keys.DISTANCE, builder::distance)
+                .mapFloat(Keys.CHANCE, f -> builder.chance(invert(f)))
+                .mapInt(Keys.RESOLUTION, builder::resolution)
+                .mapFloat(Keys.CUTOFF_STRENGTH, builder::cutoffStrength)
+                // Declaring a walls object is itself what turns wall noise on.
+                .mapObject(Keys.WALLS, o -> builder.useWallNoise(true).walls(NoiseMapSettings.from(o, original.walls)))
+                .mapBool(Keys.USE_WALL_NOISE, builder::useWallNoise)
+                .mapBool(Keys.CHECK_WATER, builder::checkWater)
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String DECORATORS = "decorators";
+        public static final String ORIGIN_HEIGHT = "originHeight";
+        public static final String NOISE_YFACTOR = "noiseYFactor";
+        public static final String D_YAW = "dYaw";
+        public static final String D_PITCH = "dPitch";
+        public static final String SCALE = "scale";
+        public static final String STRETCH = "stretch";
+        public static final String YAW = "yaw";
+        public static final String PITCH = "pitch";
+        public static final String DISTANCE = "distance";
+        public static final String CHANCE = "chance";
+        public static final String RESOLUTION = "resolution";
+        public static final String CUTOFF_STRENGTH = "cutoffStrength";
+        public static final String USE_WALL_NOISE = "useWallNoise";
+        public static final String CHECK_WATER = "checkWater";
+        public static final String WALLS = "walls";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private ConditionSettings conditions = DEFAULT_CONDITIONS;
         private DecoratorSettings decorators = DEFAULT_DECORATORS;
         private Range originHeight = Range.of(20, 66);
         private float noiseYFactor = 0.7F;
-        private ScalableFloat dYaw = new ScalableFloat(0.0F, 0.0F, 0.5F, 4.0F, 1.0F);
-        private ScalableFloat dPitch = new ScalableFloat(0.0F, 0.0F, 0.8F, 2.0F, 1.0F);
+        private ScalableFloat deltaYaw = new ScalableFloat(0.0F, 0.0F, 0.5F, 4.0F, 1.0F);
+        private ScalableFloat deltaPitch = new ScalableFloat(0.0F, 0.0F, 0.8F, 2.0F, 1.0F);
         private ScalableFloat scale = new ScalableFloat(0.0F, 2.0F, 1.0F, 0.0F, 1.0F);
         private ScalableFloat stretch = new ScalableFloat(3.0F, 1.0F, 1.0F, 0.0F, 1.0F);
         private ScalableFloat yaw = new ScalableFloat(0.0F, 1.0F, 1.0F, 0.0F, 1.0F);
@@ -117,10 +119,9 @@ public record RavineSettings(
         private double cutoffStrength = 5.0;
         private boolean useWallNoise = false;
         private boolean checkWater = true;
-        private NoiseMapSettings walls = NoiseMapSettings.builder()
-            .frequency(0.5F).range(Range.of(0, 4)).build();
+        private NoiseMapSettings walls = NoiseMapSettings.builder().frequency(0.5F).range(Range.of(0, 4)).build();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -142,13 +143,13 @@ public record RavineSettings(
             return this;
         }
 
-        public Builder dYaw(ScalableFloat dYaw) {
-            this.dYaw = dYaw;
+        public Builder deltaYaw(ScalableFloat deltaYaw) {
+            this.deltaYaw = deltaYaw;
             return this;
         }
 
-        public Builder dPitch(ScalableFloat dPitch) {
-            this.dPitch = dPitch;
+        public Builder deltaPitch(ScalableFloat deltaPitch) {
+            this.deltaPitch = deltaPitch;
             return this;
         }
 
@@ -208,10 +209,11 @@ public record RavineSettings(
         }
 
         public RavineSettings build() {
-            return new RavineSettings(this.conditions, this.decorators, this.originHeight,
-                this.noiseYFactor, this.dYaw, this.dPitch, this.scale, this.stretch, this.yaw,
-                this.pitch, this.distance, this.chance, this.resolution, this.cutoffStrength,
-                this.useWallNoise, this.checkWater, this.walls);
+            return new RavineSettings(this.conditions, this.decorators, this.originHeight, this.noiseYFactor,
+                    this.deltaYaw, this.deltaPitch, this.scale, this.stretch, this.yaw, this.pitch, this.distance,
+                    this.chance, this.resolution, this.cutoffStrength, this.useWallNoise, this.checkWater, this.walls);
         }
+
     }
+
 }

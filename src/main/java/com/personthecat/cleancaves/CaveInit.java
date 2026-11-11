@@ -4,9 +4,10 @@ import com.personthecat.cleancaves.config.CavePreset;
 import com.personthecat.cleancaves.config.ConfigFile;
 import com.personthecat.cleancaves.config.PresetReader;
 import com.personthecat.cleancaves.util.HjsonTools;
-import net.minecraftforge.fml.common.Loader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import net.minecraftforge.fml.common.Loader;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -31,20 +32,7 @@ public final class CaveInit {
     /** A list of valid extensions to compare against presets. */
     private static final List<String> EXTENSIONS = List.of("hjson", "json", "cave");
 
-    private CaveInit() {}
-
-    /**
-     * Holder so that the config directory is resolved on first use rather than when this class is
-     * loaded. {@code Loader.instance().getConfigDir()} is only meaningful once FML has started.
-     */
-    private static final class Dirs {
-        static final Path ROOT = Loader.instance().getConfigDir().toPath().resolve(Reference.MOD_ID);
-        static final Path BACKUPS = ROOT.resolve("backup");
-        static final Path EXAMPLES = ROOT.resolve("examples");
-        static final Path PRESETS = ROOT.resolve("presets");
-        static final Path IMPORTS = ROOT.resolve("imports");
-        static final Path GENERATED = ROOT.resolve("generated");
-    }
+    private CaveInit() { }
 
     /** {@code config/cleancaves} -- holds TUTORIAL.cave and REFERENCE.cave. */
     public static Path caveDir() {
@@ -83,8 +71,8 @@ public final class CaveInit {
         // If necessary, automatically write the expanded values.
         if (ConfigFile.autoGenerate) {
             ensureDirExists(generatedDir()).expect(CANT_CREATE);
-            presets.forEach((name, preset) ->
-                HjsonTools.writeJson(preset.raw(), generatedDir().resolve(name + ".cave")).throwIfPresent());
+            presets.forEach((name, preset) -> HjsonTools.writeJson(preset.raw(), generatedDir().resolve(name + ".cave"))
+                    .throwIfPresent());
         }
         printLoadedPresets(presets);
     }
@@ -114,7 +102,22 @@ public final class CaveInit {
 
     /** Prints which presets are currently loaded and whether they are enabled. */
     private static void printLoadedPresets(Map<String, CavePreset> presets) {
-        presets.forEach((name, preset) ->
-            log.info("{} is {}.", name, preset.enabled() ? "enabled" : "disabled"));
+        presets.forEach((name, preset) -> log.info("{} is {}.", name, preset.enabled() ? "enabled" : "disabled"));
     }
+
+    /**
+     * Holder so that the config directory is resolved on first use rather than when this class is
+     * loaded. {@code Loader.instance().getConfigDir()} is only meaningful once FML has started.
+     */
+    private static final class Dirs {
+
+        static final Path ROOT = Loader.instance().getConfigDir().toPath().resolve(Reference.MOD_ID);
+        static final Path BACKUPS = ROOT.resolve("backup");
+        static final Path EXAMPLES = ROOT.resolve("examples");
+        static final Path PRESETS = ROOT.resolve("presets");
+        static final Path IMPORTS = ROOT.resolve("imports");
+        static final Path GENERATED = ROOT.resolve("generated");
+
+    }
+
 }

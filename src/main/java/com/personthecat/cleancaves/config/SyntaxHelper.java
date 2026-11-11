@@ -9,26 +9,25 @@ import java.util.regex.Pattern;
 
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
-public class SyntaxHelper {
+public final class SyntaxHelper {
 
     /** A message informing the user that their comma is inside of a string. */
     private static final String COMMA_MESSAGE = "Found comma (,) in string. "
-        + "Remove it or use double quotes. e.g. <\"value\",>\n"
-        + "Source: {}";
+            + "Remove it or use double quotes. e.g. <\"value\",>\n" + "Source: {}";
 
     /** A message informing the user that their comment is inside of a string. */
     private static final String COMMENT_MESSAGE = "Found comment (# or //) in string. "
-        + "Put your comment above this value or use double quotes. e.g. <\"value\" # comment>\n"
-        + "Source: {}";
+            + "Put your comment above this value or use double quotes. e.g. <\"value\" # comment>\n" + "Source: {}";
 
     /** A message reminding users not to use semicolons. */
-    private static final String SEMICOLON_MESSAGE = "Found semicolon (;) in string. "
-        + "You need to remove it.\n"
-        + "Source: {}";
+    private static final String SEMICOLON_MESSAGE = "Found semicolon (;) in string. " + "You need to remove it.\n"
+            + "Source: {}";
 
     /** Detects comments at the ends of strings.  */
     private static final Pattern COMMENT_PATTERN = Pattern.compile("#|//|/\\*");
-    
+
+    private SyntaxHelper() { }
+
     /**
      * Recursively checks for a series of common syntax errors in presets.
      * This class is designed to provide more helpful crashes / error logs
@@ -86,4 +85,5 @@ public class SyntaxHelper {
             throw runExF(COMMENT_MESSAGE, file.getFileName());
         }
     }
+
 }

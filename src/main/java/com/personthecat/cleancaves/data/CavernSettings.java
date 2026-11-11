@@ -9,71 +9,67 @@ import java.util.List;
 import java.util.Optional;
 
 /** Large open spaces carved by one or more 3-dimensional noise generators. */
-public record CavernSettings(
-    ConditionSettings conditions,
-    DecoratorSettings decorators,
-    int resolution,
-    Optional<NoiseMapSettings> offset,
-    Optional<NoiseMapSettings> walls,
-    Optional<NoiseMapSettings> wallOffset,
-    float wallCurveRatio,
-    boolean wallInterpolation,
-    List<NoiseSettings> generators,
-    Optional<TunnelSettings> branches,
-    boolean deferred
-) {
+public record CavernSettings(ConditionSettings conditions,
+        DecoratorSettings decorators,
+        int resolution,
+        Optional<NoiseMapSettings> offset,
+        Optional<NoiseMapSettings> walls,
+        Optional<NoiseMapSettings> wallOffset,
+        float wallCurveRatio,
+        boolean wallInterpolation,
+        List<NoiseSettings> generators,
+        Optional<TunnelSettings> branches,
+        boolean deferred) {
+
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = CavePreset.Keys.caverns;
+    private static final String FEATURE_NAME = CavePreset.Keys.CAVERNS;
 
     /** The default noise generator settings used by the caverns feature. */
     private static final NoiseSettings DEFAULT_GENERATOR = NoiseSettings.builder()
-        .frequency(0.0143F).threshold(Range.of(-0.6F)).stretch(0.5F).octaves(1).build();
+            .frequency(0.0143F)
+            .threshold(Range.of(-0.6F))
+            .stretch(0.5F)
+            .octaves(1)
+            .build();
 
     /** The default ceiling noise parameters used by caverns, if absent. */
     private static final NoiseMapSettings DEFAULT_CEIL_NOISE = NoiseMapSettings.builder()
-        .frequency(0.02F).range(Range.of(-17, -3)).build();
+            .frequency(0.02F)
+            .range(Range.of(-17, -3))
+            .build();
 
     /** The default floor noise parameters used by caverns, if absent. */
     private static final NoiseMapSettings DEFAULT_FLOOR_NOISE = NoiseMapSettings.builder()
-        .frequency(0.02F).range(Range.of(0, 8)).build();
+            .frequency(0.02F)
+            .range(Range.of(0, 8))
+            .build();
 
     private static final NoiseMapSettings DEFAULT_HEIGHT_OFFSET = NoiseMapSettings.builder()
-        .frequency(0.005F).range(Range.of(0, 50)).build();
+            .frequency(0.005F)
+            .range(Range.of(0, 50))
+            .build();
 
     /** The default wall noise used at biome borders. */
     private static final NoiseMapSettings DEFAULT_WALL_NOISE = NoiseMapSettings.builder()
-        .frequency(0.02F).range(Range.of(9, 15)).build();
+            .frequency(0.02F)
+            .range(Range.of(9, 15))
+            .build();
 
     /** Transformations for biome walls for this generator. */
     private static final NoiseMapSettings DEFAULT_WALL_OFFSET = NoiseMapSettings.builder()
-        .frequency(0.05F).range(Range.of(0, 255)).build();
+            .frequency(0.05F)
+            .range(Range.of(0, 255))
+            .build();
 
     /** Default spawn conditions for all cavern generators. */
     private static final ConditionSettings DEFAULT_CONDITIONS = ConditionSettings.builder()
-        .height(Range.of(10, 50))
-        .ceiling(Optional.of(DEFAULT_CEIL_NOISE))
-        .floor(Optional.of(DEFAULT_FLOOR_NOISE))
-        .build();
+            .height(Range.of(10, 50))
+            .ceiling(Optional.of(DEFAULT_CEIL_NOISE))
+            .floor(Optional.of(DEFAULT_FLOOR_NOISE))
+            .build();
 
     /** Default decorator settings for all cavern generators. */
     private static final DecoratorSettings DEFAULT_DECORATORS = DecoratorSettings.DEFAULTS;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String conditions = "conditions";
-        public static final String decorators = "decorators";
-        public static final String resolution = "resolution";
-        public static final String offset = "offset";
-        public static final String walls = "walls";
-        public static final String wallOffset = "wallOffset";
-        public static final String wallCurveRatio = "wallCurveRatio";
-        public static final String wallInterpolation = "wallInterpolation";
-        public static final String generators = "generators";
-        public static final String branches = "branches";
-        public static final String deferred = "deferred";
-
-        private Keys() {}
-    }
 
     public static Builder builder() {
         return new Builder();
@@ -93,26 +89,46 @@ public record CavernSettings(
         final ConditionSettings inheritedConditions = builder.conditions;
         final DecoratorSettings inheritedDecorators = builder.decorators;
         return new HjsonMapper(json)
-            .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inheritedConditions)))
-            .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inheritedDecorators)))
-            .mapInt(Keys.resolution, builder::resolution)
-            .mapObject(Keys.offset, o ->
-                builder.offset(Optional.of(NoiseMapSettings.from(o, DEFAULT_HEIGHT_OFFSET))))
-            .mapObject(Keys.walls, o ->
-                builder.walls(Optional.of(NoiseMapSettings.from(o, DEFAULT_WALL_NOISE))))
-            .mapObject(Keys.wallOffset, o ->
-                builder.wallOffset(Optional.of(NoiseMapSettings.from(o, DEFAULT_WALL_OFFSET))))
-            .mapFloat(Keys.wallCurveRatio, builder::wallCurveRatio)
-            .mapBool(Keys.wallInterpolation, builder::wallInterpolation)
-            .mapArray(Keys.generators, o -> NoiseSettings.from(o, DEFAULT_GENERATOR), builder::generators)
-            // Branches inherit the conditions and decorators resolved for these caverns.
-            .mapObject(Keys.branches, o -> builder.branches(Optional.of(
-                TunnelSettings.from(o, builder.conditions, builder.decorators))))
-            .mapBool(Keys.deferred, builder::deferred)
-            .release(builder::build);
+                .mapSelf(o -> builder.conditions(ConditionSettings.from(o, inheritedConditions)))
+                .mapSelf(o -> builder.decorators(DecoratorSettings.from(o, inheritedDecorators)))
+                .mapInt(Keys.RESOLUTION, builder::resolution)
+                .mapObject(Keys.OFFSET,
+                        o -> builder.offset(Optional.of(NoiseMapSettings.from(o, DEFAULT_HEIGHT_OFFSET))))
+                .mapObject(Keys.WALLS, o -> builder.walls(Optional.of(NoiseMapSettings.from(o, DEFAULT_WALL_NOISE))))
+                .mapObject(Keys.WALL_OFFSET,
+                        o -> builder.wallOffset(Optional.of(NoiseMapSettings.from(o, DEFAULT_WALL_OFFSET))))
+                .mapFloat(Keys.WALL_CURVE_RATIO, builder::wallCurveRatio)
+                .mapBool(Keys.WALL_INTERPOLATION, builder::wallInterpolation)
+                .mapArray(Keys.GENERATORS, o -> NoiseSettings.from(o, DEFAULT_GENERATOR), builder::generators)
+                // Branches inherit the conditions and decorators resolved for these caverns.
+                .mapObject(Keys.BRANCHES,
+                        o -> builder.branches(Optional.of(TunnelSettings.from(o, builder.conditions,
+                                builder.decorators))))
+                .mapBool(Keys.DEFERRED, builder::deferred)
+                .release(builder::build);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String CONDITIONS = "conditions";
+        public static final String DECORATORS = "decorators";
+        public static final String RESOLUTION = "resolution";
+        public static final String OFFSET = "offset";
+        public static final String WALLS = "walls";
+        public static final String WALL_OFFSET = "wallOffset";
+        public static final String WALL_CURVE_RATIO = "wallCurveRatio";
+        public static final String WALL_INTERPOLATION = "wallInterpolation";
+        public static final String GENERATORS = "generators";
+        public static final String BRANCHES = "branches";
+        public static final String DEFERRED = "deferred";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         ConditionSettings conditions = DEFAULT_CONDITIONS;
         DecoratorSettings decorators = DEFAULT_DECORATORS;
         private int resolution = 1;
@@ -125,7 +141,7 @@ public record CavernSettings(
         private Optional<TunnelSettings> branches = Optional.empty();
         private boolean deferred = false;
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder conditions(ConditionSettings conditions) {
             this.conditions = conditions;
@@ -183,9 +199,11 @@ public record CavernSettings(
         }
 
         public CavernSettings build() {
-            return new CavernSettings(this.conditions, this.decorators, this.resolution,
-                this.offset, this.walls, this.wallOffset, this.wallCurveRatio,
-                this.wallInterpolation, this.generators, this.branches, this.deferred);
+            return new CavernSettings(this.conditions, this.decorators, this.resolution, this.offset, this.walls,
+                    this.wallOffset, this.wallCurveRatio, this.wallInterpolation, this.generators, this.branches,
+                    this.deferred);
         }
+
     }
+
 }

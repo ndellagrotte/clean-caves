@@ -6,6 +6,7 @@ import java.util.List;
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
 public enum Direction {
+
     UP,
     DOWN,
     NORTH,
@@ -17,28 +18,24 @@ public enum Direction {
 
     public static Direction from(String s) {
         return Arrays.stream(values())
-            .filter(v -> v.toString().equalsIgnoreCase(s))
-            .findFirst()
-            .orElseThrow(() -> runExF(
-                "Error: Direction \"{}\" does not exist. The following are valid options:\n\n{}",
-                s, Arrays.toString(values())));
+                .filter(v -> v.toString().equalsIgnoreCase(s))
+                .findFirst()
+                .orElseThrow(() -> runExF("Error: Direction \"{}\" does not exist. The following are valid options:\n\n{}",
+                        s, Arrays.toString(values())));
     }
 
     /** A DTO counterpart to using Direction arrays. */
-    public record Container(
-        boolean up,
-        boolean down,
-        boolean side,
-        boolean north,
-        boolean south,
-        boolean east,
-        boolean west
-    ) {
-        private static final Container ALL_DIRECTIONS =
-            new Container(true, true, true, true, true, true, true);
+    public record Container(boolean up,
+            boolean down,
+            boolean side,
+            boolean north,
+            boolean south,
+            boolean east,
+            boolean west) {
 
-        private static final Container NO_DIRECTIONS =
-            new Container(false, false, false, false, false, false, false);
+        private static final Container ALL_DIRECTIONS = new Container(true, true, true, true, true, true, true);
+
+        private static final Container NO_DIRECTIONS = new Container(false, false, false, false, false, false, false);
 
         /** The default when a preset names no directions at all. */
         public static Container none() {
@@ -50,8 +47,13 @@ public enum Direction {
             if (directions.isEmpty()) {
                 return ALL_DIRECTIONS;
             }
-            boolean up = false, down = false, side = false;
-            boolean north = false, south = false, east = false, west = false;
+            boolean up = false;
+            boolean down = false;
+            boolean side = false;
+            boolean north = false;
+            boolean south = false;
+            boolean east = false;
+            boolean west = false;
             // Directions are assumed to be non-redundant from preset tester.
             for (final Direction direction : directions) {
                 switch (direction) {
@@ -65,9 +67,12 @@ public enum Direction {
                     case ALL -> {
                         return ALL_DIRECTIONS;
                     }
+                    default -> throw new IllegalStateException("Unhandled direction: " + direction);
                 }
             }
             return new Container(up, down, side, north, south, east, west);
         }
+
     }
+
 }

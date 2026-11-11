@@ -1,46 +1,28 @@
 package com.personthecat.cleancaves.data;
 
 import com.personthecat.cleancaves.util.HjsonMapper;
+import org.hjson.JsonObject;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
-import org.hjson.JsonObject;
 
 import java.util.List;
 
 /** Everything a world carver places on or around the blocks it removes. */
-public record DecoratorSettings(
-    List<IBlockState> replaceableBlocks,
-    boolean replaceDecorators,
-    boolean replaceSolidBlocks,
-    List<CaveBlockSettings> caveBlocks,
-    List<WallDecoratorSettings> wallDecorators,
-    List<PondSettings> ponds,
-    ShellSettings shell,
-    List<IBlockState> globalDecorators
-) {
+public record DecoratorSettings(List<IBlockState> replaceableBlocks,
+        boolean replaceDecorators,
+        boolean replaceSolidBlocks,
+        List<CaveBlockSettings> caveBlocks,
+        List<WallDecoratorSettings> wallDecorators,
+        List<PondSettings> ponds,
+        ShellSettings shell,
+        List<IBlockState> globalDecorators) {
+
     /** Common default settings to be used by all world carvers. */
     public static final DecoratorSettings DEFAULTS = builder().build();
 
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String replaceableBlocks = "replaceableBlocks";
-        public static final String replaceDecorators = "replaceDecorators";
-        public static final String replaceSolidBlocks = "replaceSolidBlocks";
-        public static final String caveBlocks = "caveBlocks";
-        public static final String wallDecorators = "wallDecorators";
-        public static final String ponds = "ponds";
-        public static final String shell = "shell";
-        public static final String globalDecorators = "globalDecorators";
-
-        private Keys() {}
-    }
-
     public static Builder builder() {
         return new Builder();
-    }
-
-    public Builder toBuilder() {
-        return new Builder(this);
     }
 
     public static DecoratorSettings from(JsonObject json, DecoratorSettings defaults) {
@@ -53,19 +35,40 @@ public record DecoratorSettings(
 
     private static DecoratorSettings copyInto(JsonObject json, Builder builder) {
         return new HjsonMapper(json)
-            .mapStateList(Keys.replaceableBlocks, builder::replaceableBlocks)
-            .mapBool(Keys.replaceDecorators, builder::replaceDecorators)
-            .mapBool(Keys.replaceSolidBlocks, builder::replaceSolidBlocks)
-            .mapArray(Keys.caveBlocks, CaveBlockSettings::from, builder::caveBlocks)
-            .mapArray(Keys.wallDecorators, WallDecoratorSettings::from, builder::wallDecorators)
-            .mapArray(Keys.ponds, PondSettings::from, builder::ponds)
-            .mapObject(Keys.shell, o -> builder.shell(ShellSettings.from(o)))
-            .release(builder::build);
+                .mapStateList(Keys.REPLACEABLE_BLOCKS, builder::replaceableBlocks)
+                .mapBool(Keys.REPLACE_DECORATORS, builder::replaceDecorators)
+                .mapBool(Keys.REPLACE_SOLID_BLOCKS, builder::replaceSolidBlocks)
+                .mapArray(Keys.CAVE_BLOCKS, CaveBlockSettings::from, builder::caveBlocks)
+                .mapArray(Keys.WALL_DECORATORS, WallDecoratorSettings::from, builder::wallDecorators)
+                .mapArray(Keys.PONDS, PondSettings::from, builder::ponds)
+                .mapObject(Keys.SHELL, o -> builder.shell(ShellSettings.from(o)))
+                .release(builder::build);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String REPLACEABLE_BLOCKS = "replaceableBlocks";
+        public static final String REPLACE_DECORATORS = "replaceDecorators";
+        public static final String REPLACE_SOLID_BLOCKS = "replaceSolidBlocks";
+        public static final String CAVE_BLOCKS = "caveBlocks";
+        public static final String WALL_DECORATORS = "wallDecorators";
+        public static final String PONDS = "ponds";
+        public static final String SHELL = "shell";
+        public static final String GLOBAL_DECORATORS = "globalDecorators";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
-        private List<IBlockState> replaceableBlocks = List.of(
-            Blocks.STONE.getDefaultState(), Blocks.DIRT.getDefaultState(), Blocks.GRASS.getDefaultState());
+
+        private List<IBlockState> replaceableBlocks = List.of(Blocks.STONE.getDefaultState(),
+                Blocks.DIRT.getDefaultState(), Blocks.GRASS.getDefaultState());
         private boolean replaceDecorators = true;
         private boolean replaceSolidBlocks = false;
         private List<CaveBlockSettings> caveBlocks = List.of();
@@ -74,7 +77,7 @@ public record DecoratorSettings(
         private ShellSettings shell = ShellSettings.builder().build();
         private List<IBlockState> globalDecorators = List.of();
 
-        private Builder() {}
+        private Builder() { }
 
         private Builder(DecoratorSettings source) {
             this.replaceableBlocks = source.replaceableBlocks;
@@ -128,9 +131,10 @@ public record DecoratorSettings(
         }
 
         public DecoratorSettings build() {
-            return new DecoratorSettings(this.replaceableBlocks, this.replaceDecorators,
-                this.replaceSolidBlocks, this.caveBlocks, this.wallDecorators, this.ponds,
-                this.shell, this.globalDecorators);
+            return new DecoratorSettings(this.replaceableBlocks, this.replaceDecorators, this.replaceSolidBlocks,
+                    this.caveBlocks, this.wallDecorators, this.ponds, this.shell, this.globalDecorators);
         }
+
     }
+
 }

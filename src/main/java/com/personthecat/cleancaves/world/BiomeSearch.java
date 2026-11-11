@@ -2,6 +2,7 @@ package com.personthecat.cleancaves.world;
 
 import com.personthecat.cleancaves.config.ConfigFile;
 import com.personthecat.cleancaves.util.Lazy;
+
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
@@ -16,23 +17,14 @@ import java.util.function.Predicate;
  * The biomes in and around a chunk. Both arrays are lazy because generators frequently decide
  * against spawning before they ever need to look at a biome.
  */
-public class BiomeSearch {
+public final class BiomeSearch {
+
     public final Lazy<Biome[]> current;
     public final Lazy<Data[]> surrounding;
 
     private BiomeSearch(Lazy<Biome[]> current, Lazy<Data[]> surrounding) {
         this.current = current;
         this.surrounding = surrounding;
-    }
-
-    /** Checks the surrounding biomes for the first match when given a predicate. */
-    public boolean anyMatches(Predicate<Biome> predicate) {
-        for (Biome b : current.get()) {
-            if (predicate.test(b)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /** A public accessor to calculate the current biome array size. */
@@ -55,12 +47,10 @@ public class BiomeSearch {
         final int actualZ = z << 4;
         // This is only used for early generators, at which point the current
         // chunk does not yet exist. As a result, this is more direct.
-        final List<Biome> biomes = Arrays.asList(
-            provider.getBiome(new BlockPos(actualX + 1, 0, actualZ + 1)),
-            provider.getBiome(new BlockPos(actualX + 1, 0, actualZ + 14)),
-            provider.getBiome(new BlockPos(actualX + 14, 0, actualZ + 1)),
-            provider.getBiome(new BlockPos(actualX + 14, 0, actualZ + 14))
-        );
+        final List<Biome> biomes = Arrays.asList(provider.getBiome(new BlockPos(actualX + 1, 0, actualZ + 1)),
+                provider.getBiome(new BlockPos(actualX + 1, 0, actualZ + 14)),
+                provider.getBiome(new BlockPos(actualX + 14, 0, actualZ + 1)),
+                provider.getBiome(new BlockPos(actualX + 14, 0, actualZ + 14)));
         // Remove redundant entries.
         return new HashSet<>(biomes).toArray(new Biome[0]);
     }
@@ -70,12 +60,22 @@ public class BiomeSearch {
         final int d = r * 2 + 1;
         final Data[] biomes = new Data[d * d];
         int index = 0;
-        for (int cX = x - r; cX <= x + r; cX++) {
-            for (int cZ = z - r; cZ <= z + r; cZ++) {
-                biomes[index++] = Data.create(world, cX, cZ);
+        for (int cx = x - r; cx <= x + r; cx++) {
+            for (int cz = z - r; cz <= z + r; cz++) {
+                biomes[index++] = Data.create(world, cx, cz);
             }
         }
         return biomes;
+    }
+
+    /** Checks the surrounding biomes for the first match when given a predicate. */
+    public boolean anyMatches(Predicate<Biome> predicate) {
+        for (Biome b : current.get()) {
+            if (predicate.test(b)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public record Data(Biome biome, int chunkX, int chunkZ, int centerX, int centerZ) {
@@ -86,5 +86,7 @@ public class BiomeSearch {
             final Biome biome = world.getBiomeProvider().getBiome(new BlockPos(centerX, 0, centerZ));
             return new Data(biome, chunkX, chunkZ, centerX, centerZ);
         }
+
     }
+
 }

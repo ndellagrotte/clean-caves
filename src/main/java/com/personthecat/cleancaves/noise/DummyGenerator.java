@@ -40,4 +40,5 @@ public class DummyGenerator extends FastNoise {
     public float GetNoise(float x, float y, float z) {
         return 0F;
     }
+
 }

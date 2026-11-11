@@ -1,5 +1,9 @@
 package com.personthecat.cleancaves.world;
 
+import com.personthecat.cleancaves.Reference;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
@@ -7,9 +11,6 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 import java.util.Arrays;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import com.personthecat.cleancaves.Reference;
 
 /**
  *   This class is used to quickly determine the maximum height at every
@@ -27,9 +28,11 @@ import com.personthecat.cleancaves.Reference;
  *  way blocks are stored and retrieved from regular Chunks, its usefulness
  *  in that context may justify its existence.
  */
-public class HeightMapLocator {
-    private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
+public final class HeightMapLocator {
 
+    private HeightMapLocator() { }
+
+    private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
 
     /**
      * The relative distance to be checked around each previous y coordinate.
@@ -110,12 +113,13 @@ public class HeightMapLocator {
     }
 
     /** Fills in a quarter of the height map using data from its corresponding chunk. */
-    private static void fillMapCorner(int[][] map, World world, int chunkX, int chunkZ, int minX, int maxX, int minZ, int maxZ) {
+    private static void fillMapCorner(int[][] map, World world, int chunkX, int chunkZ, int minX, int maxX, int minZ,
+            int maxZ) {
         final Chunk chunk = world.getChunk(chunkX, chunkZ);
         final int seaLevel = world.getSeaLevel();
         final int[] original = chunk.getHeightMap();
         for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
+            for (int z = minZ; z <= maxZ; z++) {
                 final int originalY = original[z << 4 | x];
                 if (originalY == seaLevel) {
                     // We're at the sea level, which might imply that water has
@@ -242,4 +246,5 @@ public class HeightMapLocator {
         }
         log.info(""); // New line
     }
+
 }

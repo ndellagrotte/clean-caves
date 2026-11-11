@@ -1,15 +1,12 @@
 package com.personthecat.cleancaves.world.feature;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.personthecat.cleancaves.CaveInit;
 import com.personthecat.cleancaves.CleanCaves;
+import com.personthecat.cleancaves.Reference;
+import com.personthecat.cleancaves.util.Result;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.server.MinecraftServer;
@@ -20,16 +17,25 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.gen.structure.template.PlacementSettings;
 import net.minecraft.world.gen.structure.template.Template;
 import net.minecraft.world.gen.structure.template.TemplateManager;
-import com.personthecat.cleancaves.util.Result;
-import static com.personthecat.cleancaves.util.CommonMethods.*;
-import static com.personthecat.cleancaves.io.SafeFileIO.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import com.personthecat.cleancaves.Reference;
 
-public class StructureSpawner {
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static com.personthecat.cleancaves.io.SafeFileIO.ensureDirExists;
+import static com.personthecat.cleancaves.io.SafeFileIO.listFiles;
+import static com.personthecat.cleancaves.util.CommonMethods.runEx;
+import static com.personthecat.cleancaves.util.CommonMethods.runExF;
+
+public final class StructureSpawner {
+
     private static final Logger log = LogManager.getLogger(Reference.MOD_NAME);
 
+    private StructureSpawner() { }
 
     /** The location where structures will be kept: {@code config/cleancaves/structures}. */
     public static Path dir() {
@@ -56,23 +62,6 @@ public class StructureSpawner {
             structures.put(removeNbt(name), template);
         }
         // To-do: Make sure to return an error when nothing is returned.
-    }
-
-    /** Attempts to read nbt data from the input file into {@code template}. */
-    private static Result<IOException> read(Template template, Path nbt) {
-        try (final InputStream is = Files.newInputStream(nbt)) {
-            template.read(CompressedStreamTools.readCompressed(is));
-        } catch (final IOException e) {
-            return Result.of(e);
-        }
-        return Result.ok();
-    }
-
-    /** Warns the user if their structure is too large. */
-    private static void warnSizeLimitations(Template template, String name) {
-        if (template.getSize().getX() > 15 || template.getSize().getZ() > 15) {
-            log.warn("Large structures are not yet fully supported. Expect cascading generation lag caused by {}.", name);
-        }
     }
 
     /**
@@ -105,11 +94,6 @@ public class StructureSpawner {
         return template;
     }
 
-    /** Indicates that no template was found by the above search. */
-    private static RuntimeException templateNotFound(String name) {
-        return runExF("Error: No template named \"{}\" was found. Please verify that this refers to a valid file or registry name.", name);
-    }
-
     /** Does not account for offsets. Must be calculated beforehand. */
     public static void spawnStructure(Template template, PlacementSettings settings, World world, BlockPos pos) {
         IBlockState state = world.getBlockState(pos);
@@ -117,7 +101,32 @@ public class StructureSpawner {
         template.addBlocksToWorld(world, pos, settings);
     }
 
+    /** Attempts to read nbt data from the input file into {@code template}. */
+    private static Result<IOException> read(Template template, Path nbt) {
+        try (InputStream is = Files.newInputStream(nbt)) {
+            template.read(CompressedStreamTools.readCompressed(is));
+        } catch (final IOException e) {
+            return Result.of(e);
+        }
+        return Result.ok();
+    }
+
+    /** Warns the user if their structure is too large. */
+    private static void warnSizeLimitations(Template template, String name) {
+        if (template.getSize().getX() > 15 || template.getSize().getZ() > 15) {
+            log.warn("Large structures are not yet fully supported. Expect cascading generation lag caused by {}.",
+                    name);
+        }
+    }
+
+    /** Indicates that no template was found by the above search. */
+    private static RuntimeException templateNotFound(String name) {
+        return runExF("Error: No template named \"{}\" was found. Please verify that this refers to a valid file or registry name.",
+                name);
+    }
+
     private static String removeNbt(String name) {
         return name.replace(".nbt", "");
     }
+
 }

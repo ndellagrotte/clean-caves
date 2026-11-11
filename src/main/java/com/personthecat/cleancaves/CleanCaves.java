@@ -11,6 +11,9 @@ import com.personthecat.cleancaves.world.event.DisableVanillaStoneGen;
 import com.personthecat.cleancaves.world.event.ReplaceVanillaCaveGen;
 import com.personthecat.cleancaves.world.feature.FeatureCaveHook;
 import com.personthecat.cleancaves.world.feature.StructureSpawner;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.world.World;
 import net.minecraft.world.gen.structure.template.Template;
 import net.minecraftforge.common.MinecraftForge;
@@ -22,33 +25,22 @@ import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
-@Mod(
-    modid = Reference.MOD_ID,
-    name = Reference.MOD_NAME,
-    version = Reference.VERSION,
-    dependencies = "after:worleycaves;",
-    acceptableRemoteVersions = "*"
-)
+@Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION,
+        dependencies = "after:worleycaves;", acceptableRemoteVersions = "*")
 public class CleanCaves {
 
     public static final Logger LOGGER = LogManager.getLogger(Reference.MOD_NAME);
 
     /** The main instance of this mod, as required by Forge. */
-    @Instance
-    public static CleanCaves instance;
+    @Instance public static CleanCaves instance;
 
-    @SidedProxy(
-        modId = Reference.MOD_ID,
-        clientSide = "com.personthecat.cleancaves.proxy.ClientProxy",
-        serverSide = "com.personthecat.cleancaves.proxy.CommonProxy")
-    public static IProxy proxy;
+    @SidedProxy(modId = Reference.MOD_ID, clientSide = "com.personthecat.cleancaves.proxy.ClientProxy",
+            serverSide = "com.personthecat.cleancaves.proxy.CommonProxy") public static IProxy proxy;
 
     /** Preset name -> the generators compiled from it. Filled on first worldgen call. */
     public final Map<String, GeneratorController> generators = new TreeMap<>();
@@ -102,4 +94,5 @@ public class CleanCaves {
         }
         return this.generators;
     }
+
 }

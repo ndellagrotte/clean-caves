@@ -2,11 +2,12 @@ package com.personthecat.cleancaves.model;
 
 import com.personthecat.cleancaves.data.StructureSettings;
 import com.personthecat.cleancaves.util.HjsonMapper;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.util.math.BlockPos;
 import org.hjson.JsonArray;
 import org.hjson.JsonObject;
 import org.hjson.JsonValue;
+
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.util.math.BlockPos;
 
 import java.util.List;
 
@@ -16,15 +17,7 @@ import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 public record BlockCheck(List<IBlockState> matchers, List<BlockPos> positions) {
 
     /** The name of this feature to be used globally in serialization. */
-    private static final String FEATURE_NAME = StructureSettings.Keys.blockChecks;
-
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String matchers = "matchers";
-        public static final String positions = "positions";
-
-        private Keys() {}
-    }
+    private static final String FEATURE_NAME = StructureSettings.Keys.BLOCK_CHECKS;
 
     public static Builder builder() {
         return new Builder();
@@ -42,9 +35,9 @@ public record BlockCheck(List<IBlockState> matchers, List<BlockPos> positions) {
     public static BlockCheck from(JsonObject json) {
         final Builder builder = builder();
         return new HjsonMapper(json)
-            .mapRequiredStateList(Keys.matchers, FEATURE_NAME, builder::matchers)
-            .mapRequiredBlockPosList(Keys.positions, FEATURE_NAME, builder::positions)
-            .release(builder::build);
+                .mapRequiredStateList(Keys.MATCHERS, FEATURE_NAME, builder::matchers)
+                .mapRequiredBlockPosList(Keys.POSITIONS, FEATURE_NAME, builder::positions)
+                .release(builder::build);
     }
 
     public static BlockCheck from(JsonArray json) {
@@ -60,14 +53,25 @@ public record BlockCheck(List<IBlockState> matchers, List<BlockPos> positions) {
             }
         }
         // This allows all other error messages and requirements to be consistent.
-        return from(new JsonObject().add(Keys.matchers, matchers).add(Keys.positions, positions));
+        return from(new JsonObject().add(Keys.MATCHERS, matchers).add(Keys.POSITIONS, positions));
+    }
+
+    /** JSON key names. */
+    public static final class Keys {
+
+        public static final String MATCHERS = "matchers";
+        public static final String POSITIONS = "positions";
+
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private List<IBlockState> matchers = List.of();
         private List<BlockPos> positions = List.of();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder matchers(List<IBlockState> matchers) {
             this.matchers = matchers;
@@ -82,5 +86,7 @@ public record BlockCheck(List<IBlockState> matchers, List<BlockPos> positions) {
         public BlockCheck build() {
             return new BlockCheck(this.matchers, this.positions);
         }
+
     }
+
 }

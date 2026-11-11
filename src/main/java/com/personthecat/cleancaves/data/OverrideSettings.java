@@ -4,10 +4,11 @@ import com.personthecat.cleancaves.config.CavePreset;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.HjsonMapper;
 import com.personthecat.cleancaves.util.HjsonTools;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.world.biome.Biome;
 import org.apache.commons.lang3.ArrayUtils;
 import org.hjson.JsonObject;
+
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.world.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,49 +20,24 @@ import java.util.Optional;
  * <p>Every field is optional: {@link #apply} pushes only the values the user actually wrote into a
  * feature's builder, leaving that feature's own defaults in place for everything else.
  */
-public record OverrideSettings(
-    Optional<Boolean> blacklistBiomes,
-    Optional<List<Biome>> biomes,
-    Optional<Boolean> blacklistDimensions,
-    Optional<List<Integer>> dimensions,
-    Optional<Range> height,
-    Optional<NoiseMapSettings> floor,
-    Optional<NoiseMapSettings> ceiling,
-    Optional<NoiseRegionSettings> region,
-    Optional<NoiseSettings> noise,
-    Optional<List<IBlockState>> replaceableBlocks,
-    Optional<Boolean> replaceDecorators,
-    Optional<List<CaveBlockSettings>> caveBlocks,
-    Optional<List<WallDecoratorSettings>> wallDecorators,
-    Optional<List<PondSettings>> ponds,
-    Optional<ShellSettings> shell,
-    Optional<TunnelSettings> branches,
-    Optional<RoomSettings> rooms,
-    List<IBlockState> globalDecorators
-) {
-    /** JSON key names. */
-    public static final class Keys {
-        public static final String blacklistBiomes = "blacklistBiomes";
-        public static final String biomes = "biomes";
-        public static final String blacklistDimensions = "blacklistDimensions";
-        public static final String dimensions = "dimensions";
-        public static final String height = "height";
-        public static final String floor = "floor";
-        public static final String ceiling = "ceiling";
-        public static final String region = "region";
-        public static final String noise = "noise";
-        public static final String replaceableBlocks = "replaceableBlocks";
-        public static final String replaceDecorators = "replaceDecorators";
-        public static final String caveBlocks = "caveBlocks";
-        public static final String wallDecorators = "wallDecorators";
-        public static final String ponds = "ponds";
-        public static final String shell = "shell";
-        public static final String branches = "branches";
-        public static final String rooms = "rooms";
-        public static final String globalDecorators = "globalDecorators";
-
-        private Keys() {}
-    }
+public record OverrideSettings(Optional<Boolean> blacklistBiomes,
+        Optional<List<Biome>> biomes,
+        Optional<Boolean> blacklistDimensions,
+        Optional<List<Integer>> dimensions,
+        Optional<Range> height,
+        Optional<NoiseMapSettings> floor,
+        Optional<NoiseMapSettings> ceiling,
+        Optional<NoiseRegionSettings> region,
+        Optional<NoiseSettings> noise,
+        Optional<List<IBlockState>> replaceableBlocks,
+        Optional<Boolean> replaceDecorators,
+        Optional<List<CaveBlockSettings>> caveBlocks,
+        Optional<List<WallDecoratorSettings>> wallDecorators,
+        Optional<List<PondSettings>> ponds,
+        Optional<ShellSettings> shell,
+        Optional<TunnelSettings> branches,
+        Optional<RoomSettings> rooms,
+        List<IBlockState> globalDecorators) {
 
     public static Builder builder() {
         return new Builder();
@@ -70,23 +46,57 @@ public record OverrideSettings(
     public static OverrideSettings from(JsonObject json) {
         final Builder builder = builder().globalDecorators(getAllDecorators(json));
         return new HjsonMapper(json)
-            .mapBool(Keys.blacklistBiomes, b -> builder.blacklistBiomes(Optional.of(b)))
-            .mapBiomes(Keys.biomes, l -> builder.biomes(Optional.of(l)))
-            .mapBool(Keys.blacklistDimensions, b -> builder.blacklistBiomes(Optional.of(b)))
-            .mapIntList(Keys.dimensions, l -> builder.dimensions(Optional.of(l)))
-            .mapRange(Keys.height, r -> builder.height(Optional.of(r)))
-            .mapObject(Keys.floor, o -> builder.floor(Optional.of(NoiseMapSettings.from(o))))
-            .mapObject(Keys.ceiling, o -> builder.ceiling(Optional.of(NoiseMapSettings.from(o))))
-            .mapObject(Keys.noise, o -> builder.noise(Optional.of(NoiseSettings.from(o))))
-            .mapStateList(Keys.replaceableBlocks, l -> builder.replaceableBlocks(Optional.of(l)))
-            .mapBool(Keys.replaceDecorators, b -> builder.replaceDecorators(Optional.of(b)))
-            .mapArray(Keys.caveBlocks, CaveBlockSettings::from, l -> builder.caveBlocks(Optional.of(l)))
-            .mapArray(Keys.wallDecorators, WallDecoratorSettings::from, l -> builder.wallDecorators(Optional.of(l)))
-            .mapArray(Keys.ponds, PondSettings::from, l -> builder.ponds(Optional.of(l)))
-            .mapObject(Keys.shell, s -> builder.shell(Optional.of(ShellSettings.from(s))))
-            .mapObject(Keys.branches, b -> builder.branches(Optional.of(TunnelSettings.from(b))))
-            .mapObject(Keys.rooms, r -> builder.rooms(Optional.of(RoomSettings.from(r))))
-            .release(builder::build);
+                .mapBool(Keys.BLACKLIST_BIOMES, b -> builder.blacklistBiomes(Optional.of(b)))
+                .mapBiomes(Keys.BIOMES, l -> builder.biomes(Optional.of(l)))
+                .mapBool(Keys.BLACKLIST_DIMENSIONS, b -> builder.blacklistBiomes(Optional.of(b)))
+                .mapIntList(Keys.DIMENSIONS, l -> builder.dimensions(Optional.of(l)))
+                .mapRange(Keys.HEIGHT, r -> builder.height(Optional.of(r)))
+                .mapObject(Keys.FLOOR, o -> builder.floor(Optional.of(NoiseMapSettings.from(o))))
+                .mapObject(Keys.CEILING, o -> builder.ceiling(Optional.of(NoiseMapSettings.from(o))))
+                .mapObject(Keys.NOISE, o -> builder.noise(Optional.of(NoiseSettings.from(o))))
+                .mapStateList(Keys.REPLACEABLE_BLOCKS, l -> builder.replaceableBlocks(Optional.of(l)))
+                .mapBool(Keys.REPLACE_DECORATORS, b -> builder.replaceDecorators(Optional.of(b)))
+                .mapArray(Keys.CAVE_BLOCKS, CaveBlockSettings::from, l -> builder.caveBlocks(Optional.of(l)))
+                .mapArray(Keys.WALL_DECORATORS, WallDecoratorSettings::from,
+                        l -> builder.wallDecorators(Optional.of(l)))
+                .mapArray(Keys.PONDS, PondSettings::from, l -> builder.ponds(Optional.of(l)))
+                .mapObject(Keys.SHELL, s -> builder.shell(Optional.of(ShellSettings.from(s))))
+                .mapObject(Keys.BRANCHES, b -> builder.branches(Optional.of(TunnelSettings.from(b))))
+                .mapObject(Keys.ROOMS, r -> builder.rooms(Optional.of(RoomSettings.from(r))))
+                .release(builder::build);
+    }
+
+    /**
+     * Collects every block any decorator anywhere in the preset might place, so that carvers can
+     * be told not to treat those blocks as untouched stone.
+     */
+    private static List<IBlockState> getAllDecorators(JsonObject json) {
+        final List<IBlockState> decorators = new ArrayList<>();
+        addAllDecorators(decorators, json); // Top-level overrides
+        addAllDecorators(decorators, json, Keys.BRANCHES);
+        addAllDecorators(decorators, json, Keys.ROOMS);
+        addAllDecorators(decorators, json, CavePreset.Keys.TUNNELS);
+        addAllDecorators(decorators, json, CavePreset.Keys.TUNNELS, TunnelSettings.Keys.BRANCHES);
+        addAllDecorators(decorators, json, CavePreset.Keys.RAVINES);
+        addAllDecorators(decorators, json, CavePreset.Keys.CAVERNS);
+        addAll(decorators, json, ClusterSettings.Keys.STATES, CavePreset.Keys.CLUSTERS);
+        addAll(decorators, json, LayerSettings.Keys.STATE, CavePreset.Keys.LAYERS);
+        return decorators;
+    }
+
+    private static void addAllDecorators(List<IBlockState> decorators, JsonObject json, String... path) {
+        HjsonTools.forEachAtPath(json, j -> addAll(decorators, j, WallDecoratorSettings.Keys.STATES),
+                ArrayUtils.add(path, DecoratorSettings.Keys.WALL_DECORATORS));
+        HjsonTools.forEachAtPath(json, j -> addAll(decorators, j, CaveBlockSettings.Keys.STATES),
+                ArrayUtils.add(path, DecoratorSettings.Keys.CAVE_BLOCKS));
+        HjsonTools.forEachAtPath(json, j -> addAll(decorators, j, PondSettings.Keys.STATES),
+                ArrayUtils.add(path, DecoratorSettings.Keys.PONDS));
+        HjsonTools.forEachAtPath(json, j -> addAll(decorators, j, ShellSettings.Decorator.Keys.STATES),
+                ArrayUtils.addAll(path, DecoratorSettings.Keys.SHELL, ShellSettings.Keys.DECORATORS));
+    }
+
+    private static void addAll(List<IBlockState> decorators, JsonObject json, String field, String... path) {
+        HjsonTools.forEachAtPath(json, j -> HjsonTools.getStateList(j, field).ifPresent(decorators::addAll), path);
     }
 
     public ConditionSettings.Builder apply(ConditionSettings.Builder builder) {
@@ -119,45 +129,34 @@ public record OverrideSettings(
         return builder;
     }
 
-    /**
-     * Collects every block any decorator anywhere in the preset might place, so that carvers can
-     * be told not to treat those blocks as untouched stone.
-     */
-    private static List<IBlockState> getAllDecorators(JsonObject json) {
-        final List<IBlockState> decorators = new ArrayList<>();
-        addAllDecorators(decorators, json); // Top-level overrides
-        addAllDecorators(decorators, json, Keys.branches);
-        addAllDecorators(decorators, json, Keys.rooms);
-        addAllDecorators(decorators, json, CavePreset.Keys.tunnels);
-        addAllDecorators(decorators, json, CavePreset.Keys.tunnels, TunnelSettings.Keys.branches);
-        addAllDecorators(decorators, json, CavePreset.Keys.ravines);
-        addAllDecorators(decorators, json, CavePreset.Keys.caverns);
-        addAll(decorators, json, ClusterSettings.Keys.states, CavePreset.Keys.clusters);
-        addAll(decorators, json, LayerSettings.Keys.state, CavePreset.Keys.layers);
-        return decorators;
-    }
+    /** JSON key names. */
+    public static final class Keys {
 
-    private static void addAllDecorators(List<IBlockState> decorators, JsonObject json, String... path) {
-        HjsonTools.forEachAtPath(json,
-            j -> addAll(decorators, j, WallDecoratorSettings.Keys.states),
-            ArrayUtils.add(path, DecoratorSettings.Keys.wallDecorators));
-        HjsonTools.forEachAtPath(json,
-            j -> addAll(decorators, j, CaveBlockSettings.Keys.states),
-            ArrayUtils.add(path, DecoratorSettings.Keys.caveBlocks));
-        HjsonTools.forEachAtPath(json,
-            j -> addAll(decorators, j, PondSettings.Keys.states),
-            ArrayUtils.add(path, DecoratorSettings.Keys.ponds));
-        HjsonTools.forEachAtPath(json,
-            j -> addAll(decorators, j, ShellSettings.Decorator.Keys.states),
-            ArrayUtils.addAll(path, DecoratorSettings.Keys.shell, ShellSettings.Keys.decorators));
-    }
+        public static final String BLACKLIST_BIOMES = "blacklistBiomes";
+        public static final String BIOMES = "biomes";
+        public static final String BLACKLIST_DIMENSIONS = "blacklistDimensions";
+        public static final String DIMENSIONS = "dimensions";
+        public static final String HEIGHT = "height";
+        public static final String FLOOR = "floor";
+        public static final String CEILING = "ceiling";
+        public static final String REGION = "region";
+        public static final String NOISE = "noise";
+        public static final String REPLACEABLE_BLOCKS = "replaceableBlocks";
+        public static final String REPLACE_DECORATORS = "replaceDecorators";
+        public static final String CAVE_BLOCKS = "caveBlocks";
+        public static final String WALL_DECORATORS = "wallDecorators";
+        public static final String PONDS = "ponds";
+        public static final String SHELL = "shell";
+        public static final String BRANCHES = "branches";
+        public static final String ROOMS = "rooms";
+        public static final String GLOBAL_DECORATORS = "globalDecorators";
 
-    private static void addAll(List<IBlockState> decorators, JsonObject json, String field, String... path) {
-        HjsonTools.forEachAtPath(json,
-            j -> HjsonTools.getStateList(j, field).ifPresent(decorators::addAll), path);
+        private Keys() { }
+
     }
 
     public static final class Builder {
+
         private Optional<Boolean> blacklistBiomes = Optional.empty();
         private Optional<List<Biome>> biomes = Optional.empty();
         private Optional<Boolean> blacklistDimensions = Optional.empty();
@@ -177,7 +176,7 @@ public record OverrideSettings(
         private Optional<RoomSettings> rooms = Optional.empty();
         private List<IBlockState> globalDecorators = List.of();
 
-        private Builder() {}
+        private Builder() { }
 
         public Builder blacklistBiomes(Optional<Boolean> blacklistBiomes) {
             this.blacklistBiomes = blacklistBiomes;
@@ -270,11 +269,12 @@ public record OverrideSettings(
         }
 
         public OverrideSettings build() {
-            return new OverrideSettings(this.blacklistBiomes, this.biomes, this.blacklistDimensions,
-                this.dimensions, this.height, this.floor, this.ceiling, this.region, this.noise,
-                this.replaceableBlocks, this.replaceDecorators, this.caveBlocks,
-                this.wallDecorators, this.ponds, this.shell, this.branches, this.rooms,
-                this.globalDecorators);
+            return new OverrideSettings(this.blacklistBiomes, this.biomes, this.blacklistDimensions, this.dimensions,
+                    this.height, this.floor, this.ceiling, this.region, this.noise, this.replaceableBlocks,
+                    this.replaceDecorators, this.caveBlocks, this.wallDecorators, this.ponds, this.shell, this.branches,
+                    this.rooms, this.globalDecorators);
         }
+
     }
+
 }

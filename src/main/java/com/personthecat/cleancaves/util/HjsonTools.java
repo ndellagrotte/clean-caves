@@ -1,6 +1,15 @@
 package com.personthecat.cleancaves.util;
 
-import com.personthecat.cleancaves.model.*;
+import com.personthecat.cleancaves.model.Direction;
+import com.personthecat.cleancaves.model.FloatRange;
+import com.personthecat.cleancaves.model.Range;
+import com.personthecat.cleancaves.model.ScalableFloat;
+import org.hjson.HjsonOptions;
+import org.hjson.JsonArray;
+import org.hjson.JsonObject;
+import org.hjson.JsonValue;
+import org.hjson.Stringify;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.Mirror;
@@ -8,40 +17,45 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.gen.structure.template.PlacementSettings;
 import net.minecraftforge.common.BiomeDictionary;
-import org.hjson.*;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.personthecat.cleancaves.util.CommonMethods.extension;
 import static com.personthecat.cleancaves.util.CommonMethods.getBiome;
-import static com.personthecat.cleancaves.util.CommonMethods.getBiomes;
 import static com.personthecat.cleancaves.util.CommonMethods.getBiomeType;
+import static com.personthecat.cleancaves.util.CommonMethods.getBiomes;
 import static com.personthecat.cleancaves.util.CommonMethods.getBlockState;
 import static com.personthecat.cleancaves.util.CommonMethods.runEx;
 import static com.personthecat.cleancaves.util.CommonMethods.runExF;
 
 @SuppressWarnings("WeakerAccess")
-public class HjsonTools {
+public final class HjsonTools {
 
     /** The settings to be used when outputting JsonObjects to the disk. */
     public static final HjsonOptions FORMATTER = new HjsonOptions()
-        .setAllowCondense(true)
-        .setAllowMultiVal(true)
-        .setCommentSpace(0)
-        .setSpace(2)
-        .setBracesSameLine(true)
-        .setOutputComments(true);
+            .setAllowCondense(true)
+            .setAllowMultiVal(true)
+            .setCommentSpace(0)
+            .setSpace(2)
+            .setBracesSameLine(true)
+            .setOutputComments(true);
+
+    private HjsonTools() { }
 
     /** Writes the JsonObject to the disk, as JSON or Hjson depending on the file extension. */
     public static Result<IOException> writeJson(JsonObject json, Path file) {
-        try (final Writer tw = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+        try (Writer tw = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
             if (extension(file).equals("json")) {
                 json.writeTo(tw, Stringify.FORMATTED);
             } else {
@@ -87,31 +101,13 @@ public class HjsonTools {
             current = switch (path.get(i)) {
                 case PathComponent.Index(int index) -> getOrTryNew(current.asArray(), index, peek);
                 // Key -> key means an object; key -> index means an array.
-                case PathComponent.Key(String key) -> peek instanceof PathComponent.Key
-                    ? getObjectOrNew(current.asObject(), key)
-                    : getArrayOrNew(current.asObject(), key);
+                case PathComponent.Key(String key) ->
+                        peek instanceof PathComponent.Key
+                                ? getObjectOrNew(current.asObject(), key)
+                                : getArrayOrNew(current.asObject(), key);
             };
         }
         return current;
-    }
-
-    /** Attempts to retrieve an object or an array. Creates a new one, if absent. */
-    private static JsonValue getOrTryNew(JsonArray array, int index, PathComponent type) {
-        if (index == array.size()) { // The value must be added.
-            switch (type) {
-                case PathComponent.Key ignored -> array.add(new JsonObject());
-                case PathComponent.Index ignored -> array.add(new JsonArray());
-            }
-        } // if index >= newSize -> index out of bounds
-        return array.get(index);
-    }
-
-    /** Attempts to set a value in a container which may either be an object or an array. */
-    private static void setEither(JsonValue container, PathComponent either, JsonValue value) {
-        switch (either) {
-            case PathComponent.Key(String key) -> container.asObject().set(key, value);
-            case PathComponent.Index(int index) -> container.asArray().set(index, value);
-        }
     }
 
     /**
@@ -120,16 +116,6 @@ public class HjsonTools {
      */
     public static void forEachAtPath(JsonObject json, Consumer<JsonObject> fn, String... path) {
         forEachContainer(json, path, 0, fn);
-    }
-
-    private static void forEachContainer(JsonObject container, String[] path, int index, Consumer<JsonObject> fn) {
-        if (index == path.length) {
-            fn.accept(container);
-            return;
-        }
-        for (final JsonObject o : getRegularObjects(container, path[index])) {
-            forEachContainer(o, path, index + 1, fn);
-        }
     }
 
     /**
@@ -142,16 +128,6 @@ public class HjsonTools {
             if (member.getName().equals(key)) {
                 getRegularObjects(json, key).forEach(fn);
             }
-            if (value.isObject()) {
-                forEachRecursive(value.asObject(), key, fn);
-            } else if (value.isArray()) {
-                forEachRecursiveInArray(value.asArray(), key, fn);
-            }
-        }
-    }
-
-    private static void forEachRecursiveInArray(JsonArray array, String key, Consumer<JsonObject> fn) {
-        for (final JsonValue value : array) {
             if (value.isObject()) {
                 forEachRecursive(value.asObject(), key, fn);
             } else if (value.isArray()) {
@@ -177,34 +153,18 @@ public class HjsonTools {
     /** Retrieves a range of integers from the input object. */
     public static Optional<Range> getRange(JsonObject json, String field) {
         return getValue(json, field)
-            .map(HjsonTools::asOrToArray)
-            .map(HjsonTools::toIntArray)
-            .map(CommonMethods::sort)
-            .map(HjsonTools::toRange);
-    }
-
-    private static Range toRange(int[] range) {
-        if (range.length == 0) {
-            return Range.of(0);
-        }
-        return range.length == 1 ? Range.of(range[0]) : Range.of(range[0], range[range.length - 1]);
+                .map(HjsonTools::asOrToArray)
+                .map(HjsonTools::toIntArray)
+                .map(CommonMethods::sort)
+                .map(HjsonTools::toRange);
     }
 
     public static Optional<FloatRange> getFloatRange(JsonObject json, String field) {
         return getValue(json, field)
-            .map(HjsonTools::asOrToArray)
-            .map(HjsonTools::toFloatArray)
-            .map(CommonMethods::sort)
-            .map(HjsonTools::toFloatRange);
-    }
-
-    private static FloatRange toFloatRange(float[] range) {
-        if (range.length == 0) {
-            return new FloatRange(0F, 0F);
-        }
-        return range.length == 1
-            ? new FloatRange(range[0], range[0])
-            : new FloatRange(range[0], range[range.length - 1]);
+                .map(HjsonTools::asOrToArray)
+                .map(HjsonTools::toFloatArray)
+                .map(CommonMethods::sort)
+                .map(HjsonTools::toFloatRange);
     }
 
     /** Safely retrieves a boolean from the input json. */
@@ -264,63 +224,25 @@ public class HjsonTools {
      */
     public static List<JsonObject> getObjectArray(JsonObject json, String field) {
         List<JsonObject> array = new ArrayList<>();
-        getValue(json, field).map(HjsonTools::asOrToArray)
-            .ifPresent(a -> flatten(array, a));
+        getValue(json, field).map(HjsonTools::asOrToArray).ifPresent(a -> flatten(array, a));
         return array;
-    }
-
-    /** Recursively flattens object arrays into a single dimension. */
-    private static void flatten(List<JsonObject> array, JsonArray source) {
-        for (JsonValue value: source) {
-            if (value.isArray()) {
-                flatten(array, value.asArray());
-            } else {
-                // This is assumed to be an object. If it isn't,
-                // The user should be informed (i.e. crash).
-                array.add(value.asObject());
-            }
-        }
     }
 
     /** Variant of {@link #getObjectArray} which does not coerce values into objects. */
     public static List<JsonObject> getRegularObjects(JsonObject json, String field) {
         final List<JsonObject> list = new ArrayList<>();
-        final JsonArray array = HjsonTools.getValue(json, field)
-            .map(HjsonTools::asOrToArray)
-            .orElseGet(JsonArray::new);
+        final JsonArray array = HjsonTools.getValue(json, field).map(HjsonTools::asOrToArray).orElseGet(JsonArray::new);
         flattenRegularObjects(list, array);
         return list;
-    }
-
-    /** Variant of {@link #flatten} which does not coerce values into objects. */
-    private static void flattenRegularObjects(List<JsonObject> array, JsonArray source) {
-        for (JsonValue value: source) {
-            if (value.isArray()) {
-                flattenRegularObjects(array, value.asArray());
-            } else if (value.isObject()) {
-                array.add(value.asObject());
-            }
-        }
     }
 
     public static Optional<List<Integer>> getIntList(JsonObject json, String field) {
         return getArray(json, field).map(HjsonTools::toIntList);
     }
 
-    private static List<Integer> toIntList(JsonArray array) {
-        final List<Integer> ints = new ArrayList<>();
-        for (JsonValue value : array) {
-            if (!value.isNumber()) {
-                throw runExF("Expected an numeric value: {}", value);
-            }
-            ints.add(value.asInt());
-        }
-        return ints;
-    }
-
     /** Converts a JsonArray into an array of ints. */
     public static int[] toIntArray(JsonArray array) {
-        final int[] ints = new  int[array.size()];
+        final int[] ints = new int[array.size()];
         for (int i = 0; i < array.size(); i++) {
             ints[i] = array.get(i).asInt();
         }
@@ -357,17 +279,8 @@ public class HjsonTools {
         return getStringArray(json, field).map(HjsonTools::toStateList);
     }
 
-    private static List<IBlockState> toStateList(List<String> ids) {
-        return ids.stream().map(id -> getBlockState(id).orElseThrow(() -> noBlockNamed(id)))
-            .collect(Collectors.toList());
-    }
-
     public static Optional<List<Direction>> getDirectionList(JsonObject json, String field) {
         return getStringArray(json, field).map(HjsonTools::toDirections);
-    }
-
-    private static List<Direction> toDirections(List<String> directions) {
-        return directions.stream().map(s -> toEnumValue(s, Direction.class)).collect(Collectors.toList());
     }
 
     /** Safely retrieves a BlockPos from the input object. */
@@ -386,51 +299,11 @@ public class HjsonTools {
             throw runEx("Relative coordinates must be specified in an array of 3 elements, e.g. [0, 0, 0].");
         }
         // Convert the array into a BlockPos object.
-        return new BlockPos(
-            coordinates.get(0).asInt(),
-            coordinates.get(1).asInt(),
-            coordinates.get(2).asInt()
-        );
-    }
-
-    private static List<BlockPos> toPositionList(JsonArray positions) {
-        final List<BlockPos> list = new ArrayList<>();
-        for (JsonValue position : positions) {
-            if (position.isNumber()) {
-                return Collections.singletonList(toPosition(positions));
-            } else if (!position.isArray()) {
-                throw runEx("Expected a list of positions, e.g. [[0, 0, 0], [1, 1, 1]].");
-            }
-            list.add(toPosition(position.asArray()));
-        }
-        return list;
+        return new BlockPos(coordinates.get(0).asInt(), coordinates.get(1).asInt(), coordinates.get(2).asInt());
     }
 
     public static Optional<List<Biome>> getBiomeList(JsonObject json, String field) {
         return getObject(json, field).map(HjsonTools::toBiomes);
-    }
-
-    private static List<Biome> toBiomes(JsonObject json) {
-        final List<Biome> biomes = new ArrayList<>();
-        // Get biomes by registry name.
-        getArray(json, "names").map(HjsonTools::toStringArray).ifPresent(a -> {
-            for (String s : a) {
-                biomes.add(getBiome(s).orElseThrow(() -> noBiomeNamed(s)));
-            }
-        });
-        // Get biomes by ID.
-        getArray(json, "IDs").map(HjsonTools::toIntArray).ifPresent(a -> {
-            for (int i : a) {
-                biomes.add(getBiome(i).orElseThrow(() -> noBiomeID(i)));
-            }
-        });
-        // Get biomes by type.
-        getArray(json, "types").map(HjsonTools::toBiomeTypes).ifPresent(a -> {
-            for (BiomeDictionary.Type t : a) {
-                Collections.addAll(biomes, getBiomes(t));
-            }
-        });
-        return biomes;
     }
 
     /** Converts a JsonArray in to a list of BiomeTypes. */
@@ -457,6 +330,186 @@ public class HjsonTools {
 
         // Return the final value.
         return settings;
+    }
+
+    /** Retrieves a scalable float from the input json. Returns the default values when no object is found. */
+    public static ScalableFloat getScalableFloatOr(JsonObject json, String field, ScalableFloat defaults) {
+        return getScalableFloat(json, field, defaults).orElse(defaults);
+    }
+
+    public static ScalableFloat toScalableFloat(int startVal, ScalableFloat defaults) {
+        return new ScalableFloat(startVal, defaults.startValRandFactor(), defaults.factor(), defaults.randFactor(),
+                defaults.exponent());
+    }
+
+    public static ScalableFloat toScalableFloat(JsonArray array, ScalableFloat defaults) {
+        return new ScalableFloat(array.size() > 0 ? array.get(0).asFloat() : defaults.startVal(),
+                array.size() > 1 ? array.get(1).asFloat() : defaults.startValRandFactor(),
+                array.size() > 2 ? array.get(2).asFloat() : defaults.factor(),
+                array.size() > 3 ? array.get(3).asFloat() : defaults.randFactor(),
+                array.size() > 4 ? array.get(4).asFloat() : defaults.exponent());
+    }
+
+    public static ScalableFloat toScalableFloat(JsonObject json, ScalableFloat defaults) {
+        return new ScalableFloat(getFloatOr(json, "startVal", defaults.startVal()),
+                getFloatOr(json, "startValRandFactor", defaults.startValRandFactor()),
+                getFloatOr(json, "factor", defaults.factor()), getFloatOr(json, "randFactor", defaults.randFactor()),
+                getFloatOr(json, "exponent", defaults.exponent()));
+    }
+
+    public static <T extends Enum<T>> Optional<T> getEnumValue(JsonObject json, String field, Class<T> clazz) {
+        return getString(json, field).map(s -> toEnumValue(s, clazz));
+    }
+
+    /** Informs the user that they have entered an invalid biome name. */
+    public static RuntimeException noBiomeNamed(String name) {
+        return runExF("There is no biome named \"{}.\"", name);
+    }
+
+    /** Informs the user that they have entered an invalid biome ID. */
+    public static RuntimeException noBiomeID(int id) {
+        return runExF("There is no biome with id \"%d.\"", id);
+    }
+
+    /** Informs the user that they have entered an invalid block name. */
+    public static RuntimeException noBlockNamed(String name) {
+        return runExF("There is no block named \"{}.\"", name);
+    }
+
+    /** Attempts to retrieve an object or an array. Creates a new one, if absent. */
+    private static JsonValue getOrTryNew(JsonArray array, int index, PathComponent type) {
+        if (index == array.size()) { // The value must be added.
+            switch (type) {
+                case PathComponent.Key ignored -> array.add(new JsonObject());
+                case PathComponent.Index ignored -> array.add(new JsonArray());
+            }
+        } // if index >= newSize -> index out of bounds
+        return array.get(index);
+    }
+
+    /** Attempts to set a value in a container which may either be an object or an array. */
+    private static void setEither(JsonValue container, PathComponent either, JsonValue value) {
+        switch (either) {
+            case PathComponent.Key(String key) -> container.asObject().set(key, value);
+            case PathComponent.Index(int index) -> container.asArray().set(index, value);
+        }
+    }
+
+    private static void forEachContainer(JsonObject container, String[] path, int index, Consumer<JsonObject> fn) {
+        if (index == path.length) {
+            fn.accept(container);
+            return;
+        }
+        for (final JsonObject o : getRegularObjects(container, path[index])) {
+            forEachContainer(o, path, index + 1, fn);
+        }
+    }
+
+    private static void forEachRecursiveInArray(JsonArray array, String key, Consumer<JsonObject> fn) {
+        for (final JsonValue value : array) {
+            if (value.isObject()) {
+                forEachRecursive(value.asObject(), key, fn);
+            } else if (value.isArray()) {
+                forEachRecursiveInArray(value.asArray(), key, fn);
+            }
+        }
+    }
+
+    private static Range toRange(int[] range) {
+        if (range.length == 0) {
+            return Range.of(0);
+        }
+        return range.length == 1 ? Range.of(range[0]) : Range.of(range[0], range[range.length - 1]);
+    }
+
+    private static FloatRange toFloatRange(float[] range) {
+        if (range.length == 0) {
+            return new FloatRange(0F, 0F);
+        }
+        return range.length == 1
+                ? new FloatRange(range[0], range[0])
+                : new FloatRange(range[0], range[range.length - 1]);
+    }
+
+    /** Recursively flattens object arrays into a single dimension. */
+    private static void flatten(List<JsonObject> array, JsonArray source) {
+        for (JsonValue value : source) {
+            if (value.isArray()) {
+                flatten(array, value.asArray());
+            } else {
+                // This is assumed to be an object. If it isn't,
+                // The user should be informed (i.e. crash).
+                array.add(value.asObject());
+            }
+        }
+    }
+
+    /** Variant of {@link #flatten} which does not coerce values into objects. */
+    private static void flattenRegularObjects(List<JsonObject> array, JsonArray source) {
+        for (JsonValue value : source) {
+            if (value.isArray()) {
+                flattenRegularObjects(array, value.asArray());
+            } else if (value.isObject()) {
+                array.add(value.asObject());
+            }
+        }
+    }
+
+    private static List<Integer> toIntList(JsonArray array) {
+        final List<Integer> ints = new ArrayList<>();
+        for (JsonValue value : array) {
+            if (!value.isNumber()) {
+                throw runExF("Expected an numeric value: {}", value);
+            }
+            ints.add(value.asInt());
+        }
+        return ints;
+    }
+
+    private static List<IBlockState> toStateList(List<String> ids) {
+        return ids.stream()
+                .map(id -> getBlockState(id).orElseThrow(() -> noBlockNamed(id)))
+                .collect(Collectors.toList());
+    }
+
+    private static List<Direction> toDirections(List<String> directions) {
+        return directions.stream().map(s -> toEnumValue(s, Direction.class)).collect(Collectors.toList());
+    }
+
+    private static List<BlockPos> toPositionList(JsonArray positions) {
+        final List<BlockPos> list = new ArrayList<>();
+        for (JsonValue position : positions) {
+            if (position.isNumber()) {
+                return Collections.singletonList(toPosition(positions));
+            } else if (!position.isArray()) {
+                throw runEx("Expected a list of positions, e.g. [[0, 0, 0], [1, 1, 1]].");
+            }
+            list.add(toPosition(position.asArray()));
+        }
+        return list;
+    }
+
+    private static List<Biome> toBiomes(JsonObject json) {
+        final List<Biome> biomes = new ArrayList<>();
+        // Get biomes by registry name.
+        getArray(json, "names").map(HjsonTools::toStringArray).ifPresent(a -> {
+            for (String s : a) {
+                biomes.add(getBiome(s).orElseThrow(() -> noBiomeNamed(s)));
+            }
+        });
+        // Get biomes by ID.
+        getArray(json, "IDs").map(HjsonTools::toIntArray).ifPresent(a -> {
+            for (int i : a) {
+                biomes.add(getBiome(i).orElseThrow(() -> noBiomeID(i)));
+            }
+        });
+        // Get biomes by type.
+        getArray(json, "types").map(HjsonTools::toBiomeTypes).ifPresent(a -> {
+            for (BiomeDictionary.Type t : a) {
+                Collections.addAll(biomes, getBiomes(t));
+            }
+        });
+        return biomes;
     }
 
     /**
@@ -489,63 +542,13 @@ public class HjsonTools {
         });
     }
 
-    /** Retrieves a scalable float from the input json. Returns the default values when no object is found. */
-    public static ScalableFloat getScalableFloatOr(JsonObject json, String field, ScalableFloat defaults) {
-        return getScalableFloat(json, field, defaults).orElse(defaults);
-    }
-
-    public static ScalableFloat toScalableFloat(int startVal, ScalableFloat defaults) {
-        return new ScalableFloat(startVal, defaults.startValRandFactor(), defaults.factor(), defaults.randFactor(), defaults.exponent());
-    }
-
-    public static ScalableFloat toScalableFloat(JsonArray array, ScalableFloat defaults) {
-        return new ScalableFloat(
-            array.size() > 0 ? array.get(0).asFloat() : defaults.startVal(),
-            array.size() > 1 ? array.get(1).asFloat() : defaults.startValRandFactor(),
-            array.size() > 2 ? array.get(2).asFloat() : defaults.factor(),
-            array.size() > 3 ? array.get(3).asFloat() : defaults.randFactor(),
-            array.size() > 4 ? array.get(4).asFloat() : defaults.exponent()
-        );
-    }
-
-    public static ScalableFloat toScalableFloat(JsonObject json, ScalableFloat defaults) {
-        return new ScalableFloat(
-            getFloatOr(json, "startVal", defaults.startVal()),
-            getFloatOr(json, "startValRandFactor", defaults.startValRandFactor()),
-            getFloatOr(json, "factor", defaults.factor()),
-            getFloatOr(json, "randFactor", defaults.randFactor()),
-            getFloatOr(json, "exponent", defaults.exponent())
-        );
-    }
-
-    public static <T extends Enum<T>> Optional<T> getEnumValue(JsonObject json, String field, Class<T> clazz) {
-        return getString(json, field).map(s -> toEnumValue(s, clazz));
-    }
-
     private static <T extends Enum<T>> T toEnumValue(String s, Class<T> clazz) {
         final T[] constants = clazz.getEnumConstants();
-        return Arrays.stream(constants)
-            .filter(v -> v.toString().equalsIgnoreCase(s))
-            .findFirst()
-            .orElseThrow(() -> {
-                final String name = clazz.getSimpleName();
-                final String values = Arrays.toString(constants);
-                return runExF("{} \"{}\" does not exist. Valid options are: {}", name, s, values);
-            });
+        return Arrays.stream(constants).filter(v -> v.toString().equalsIgnoreCase(s)).findFirst().orElseThrow(() -> {
+            final String name = clazz.getSimpleName();
+            final String values = Arrays.toString(constants);
+            return runExF("{} \"{}\" does not exist. Valid options are: {}", name, s, values);
+        });
     }
 
-    /** Informs the user that they have entered an invalid biome name. */
-    public static RuntimeException noBiomeNamed(String name) {
-        return runExF("There is no biome named \"{}.\"", name);
-    }
-
-    /** Informs the user that they have entered an invalid biome ID. */
-    public static RuntimeException noBiomeID(int ID) {
-        return runExF("There is no biome with id \"%d.\"", ID);
-    }
-
-    /** Informs the user that they have entered an invalid block name. */
-    public static RuntimeException noBlockNamed(String name) {
-        return runExF("There is no block named \"{}.\"", name);
-    }
 }

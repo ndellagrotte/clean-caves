@@ -45,4 +45,5 @@ public final class Lazy<T> implements Supplier<T> {
     public boolean computed() {
         return this.supplier == null;
     }
+
 }

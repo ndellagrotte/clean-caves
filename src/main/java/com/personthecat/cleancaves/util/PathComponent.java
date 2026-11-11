@@ -13,7 +13,8 @@ public sealed interface PathComponent {
         return new Index(index);
     }
 
-    record Key(String key) implements PathComponent {}
+    record Key(String key) implements PathComponent { }
 
-    record Index(int index) implements PathComponent {}
+    record Index(int index) implements PathComponent { }
+
 }

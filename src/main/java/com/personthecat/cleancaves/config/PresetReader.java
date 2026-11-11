@@ -38,7 +38,7 @@ public final class PresetReader {
     /** The key where inner presets are stored recursively. */
     public static final String INNER_KEY = "inner";
 
-    private PresetReader() {}
+    private PresetReader() { }
 
     /**
      * Reads a series of {@link CavePreset} objects from a directory.
@@ -61,8 +61,7 @@ public final class PresetReader {
         // Convert to a map of filename -> POJO.
         final Map<String, CavePreset> settings = toSettings(jsons);
         // Check each preset and inform the user of potential mistakes.
-        settings.forEach((name, cfg) ->
-            new PresetTester(cfg, name, ConfigFile.strictPresets).run());
+        settings.forEach((name, cfg) -> new PresetTester(cfg, name, ConfigFile.strictPresets).run());
         return settings;
     }
 
@@ -136,14 +135,13 @@ public final class PresetReader {
 
     /** Parses the contents of the given file into a generic JsonValue. */
     private static JsonValue loadJson(Path file) {
-        try (final Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-            return extension(file).equals("json")
-                ? JsonObject.readJSON(reader)
-                : JsonObject.readHjson(reader);
+        try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+            return extension(file).equals("json") ? JsonObject.readJSON(reader) : JsonObject.readHjson(reader);
         } catch (final IOException ignored) {
             throw runExF("Unable to load preset file {}", file.getFileName());
         } catch (final ParseException e) {
             throw runEx(f("Error reading {}", file.getFileName()), e);
         }
     }
+
 }

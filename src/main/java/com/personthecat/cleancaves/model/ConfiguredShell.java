@@ -3,11 +3,11 @@ package com.personthecat.cleancaves.model;
 import com.personthecat.cleancaves.data.ShellSettings;
 import com.personthecat.cleancaves.noise.DummyGenerator;
 import fastnoise.FastNoise;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.world.World;
 
 import java.util.List;
-
 
 public class ConfiguredShell {
 
@@ -32,7 +32,7 @@ public class ConfiguredShell {
         this.decorators = List.of();
     }
 
-    public static class Decorator {
+    public static final class Decorator {
 
         public final ShellSettings.Decorator cfg;
         public final FastNoise noise;
@@ -63,5 +63,7 @@ public class ConfiguredShell {
         private boolean testNoise(int x, int y, int z) {
             return noise.GetBoolean(x, y, z);
         }
+
     }
+
 }
