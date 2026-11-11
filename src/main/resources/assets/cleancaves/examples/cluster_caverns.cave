@@ -20,7 +20,7 @@
     centerHeight: [ 33, 39 ]
     noise: {
       frequency: 0.02
-      scale: 0.35
+      threshold: -0.3
       stretch: 0.4
     }
   }

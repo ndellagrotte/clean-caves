@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.init.Bootstrap;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -23,9 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
- * Parses the presets that ship inside the jar. Nothing here touches Minecraft, so a broken preset
- * is caught by {@code ./gradlew test} instead of at world load, where the only symptom is a crash
- * or a preset that silently generates nothing.
+ * Loads the presets that ship inside the jar the way the game does, so a broken preset is caught by
+ * {@code ./gradlew test} instead of at world load, where the only symptom is a crash or a preset
+ * that silently generates nothing.
  */
 class ShippedPresetsTest {
 
@@ -111,6 +113,28 @@ class ShippedPresetsTest {
         final List<String> unresolved = new ArrayList<>();
         presets.forEach((file, json) -> findReferences(file.getFileName().toString(), json, unresolved));
         assertThat(unresolved.isEmpty()).as("unresolved references: " + unresolved).isTrue();
+    }
+
+    @Test
+    @DisplayName("no shipped preset carries a key the loader never reads")
+    void shippedPresetsUseOnlyKnownKeys() {
+        // Block and biome names are resolved while a preset is read.
+        Bootstrap.register();
+        final Map<Path, JsonObject> presets = new LinkedHashMap<>(load(PRESETS));
+        presets.putAll(load(EXAMPLES));
+        final Map<Path, JsonObject> definitions = load(IMPORTS);
+        presets.values().forEach(PresetReader::enforceValueOrder);
+        PresetExpander.expandAll(presets, definitions);
+
+        // A key written in an outdated or misspelled form is not an error: it is skipped, and the
+        // feature it was meant to configure quietly falls back to its default.
+        final List<String> unused = new ArrayList<>();
+        presets.forEach((file, json) -> {
+            json.setAllAccessed(false);
+            CavePreset.from(json);
+            json.getUnusedPaths().forEach(path -> unused.add(file.getFileName() + ": " + path));
+        });
+        assertThat(unused).as("keys that no setting reads").isEmpty();
     }
 
 }

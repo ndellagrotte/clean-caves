@@ -10,7 +10,7 @@
   imports: blocks.cave
   $VANILLA: "ALL" # Default tunnels, ravines, etc.
   enabled: false
-  stoneLayers: [
+  layers: [
     {
       state: $GRANITE
       height: [ 0, 12 ]

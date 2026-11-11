@@ -67,7 +67,7 @@
     height: [ 6, 50 ]
     generators: {
       frequency: 0.0167
-      scale: 0.4
+      threshold: -0.2
       stretch: 0.3
     }
   }
@@ -89,7 +89,7 @@
     # Sporadic gravel.
     {
       states: gravel
-      chance: 0.75
+      integrity: 0.75
       height: [ 9, 50 ]
       directions: down
       matchers: [ "stone", "$ANDESITE" ]
@@ -98,7 +98,7 @@
     # Sporadic coarse dirt.
     {
       states: $COARSE_DIRT
-      chance: 0.3
+      integrity: 0.3
       height: [ 9, 50 ]
       directions: down
       matchers: [ "stone", "$ANDESITE" ]
@@ -107,7 +107,7 @@
     # Lights on the ceiling.
     {
       states: sea_lantern
-      chance: 0.003
+      integrity: 0.003
       height: [ 9, 50 ]
       directions: up
       matchers: [ "stone", "$ANDESITE" ]
@@ -116,7 +116,7 @@
     # Cobwebs on the ceiling.
     {
       states: web
-      chance: 0.001
+      integrity: 0.001
       height: [ 9, 50 ]
       directions: up
       matchers: [ "stone", "$ANDESITE" ]
@@ -127,7 +127,7 @@
     # Spawns extra ferns on the ground.
     {
       states: tallgrass:2
-      chance: 0.05
+      integrity: 0.05
       height: [ 9, 50 ]
       directions: down
       matchers: grass
@@ -136,7 +136,7 @@
     # Extra tall grass on the ground.
     {
       states: tallgrass:1
-      chance: 0.2
+      integrity: 0.2
       height: [ 9, 50 ]
       directions: down
       matchers: grass
@@ -145,7 +145,7 @@
     # Poppies
     {
       states: red_flower
-      chance: 0.02
+      integrity: 0.02
       height: [ 9, 50 ]
       directions: down
       matchers: grass
@@ -154,7 +154,7 @@
     # Dandelions
     {
       states: yellow_flower
-      chance: 0.01
+      integrity: 0.01
       height: [ 9, 50 ]
       directions: down
       matchers: grass
@@ -163,7 +163,7 @@
     # Mushrooms
     {
       states: [ "red_mushroom", "brown_mushroom" ]
-      chance: 0.02
+      integrity: 0.02
       height: [ 9, 50 ]
       directions: down
       matchers: [ "grass", "stone", "$ANDESITE" ]
@@ -183,7 +183,7 @@
       matchers: [ "stone", "$ANDESITE" ]
       region: {
         frequency: 0.0125
-        scale: 0.4
+        threshold: -0.2
       }
     }
     # Hanging leaves

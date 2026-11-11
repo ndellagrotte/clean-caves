@@ -14,7 +14,6 @@
   ]
   enabled: false
   caverns: {
-    enabled: true
     height: [ 5, 75 ]
     generators: {
       frequency: 0.02

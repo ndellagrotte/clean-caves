@@ -86,7 +86,7 @@
   GREEN_CONCRETE: concrete:13
   RED_CONCRETE: concrete:14
   BLACK_CONCRETE: concrete:15
-  WHITE_CONCRETE_POWDER: concrete_powder:0s
+  WHITE_CONCRETE_POWDER: concrete_powder:0
   ORANGE_CONCRETE_POWDER: concrete_powder:1
   MAGENTA_CONCRETE_POWDER: concrete_powder:2
   LIGHT_BLUE_CONCRETE_POWDER: concrete_powder:3

@@ -12,7 +12,7 @@
   wallDecorators: [
     {
       states: dirt
-      chance: 0.15
+      integrity: 0.15
       height: [ 20, 40 ]
       matchers: stone
       directions: down
@@ -20,7 +20,7 @@
     }
     {
       states: gravel
-      chance: 0.15
+      integrity: 0.15
       height: [ 20, 40 ]
       matchers: [ "stone", "dirt" ]
       directions: down
@@ -51,7 +51,7 @@
       startVal: 4
       startValRandFactor: 1
     }
-    scaleY: {
+    stretch: {
       randFactor: 0.1
       startVal: 0.5
     }

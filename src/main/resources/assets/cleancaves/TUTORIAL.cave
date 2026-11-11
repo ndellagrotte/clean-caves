@@ -658,7 +658,7 @@ tunnels: [
 # * stretch.startVal is three times as high
 # * scale is affected by noise.
 #
-# You can change this noise by adding a noise2D block, but be aware that you
+# You can change this noise by adding a `walls` block, but be aware that you
 # **should not add one** if you are not going to use it.
 ravines: [
   {
@@ -720,9 +720,9 @@ ravines: [
 ]
 
 # This generator is essentially a wrapper for FastNoise. There is an **array**
-# of noise3D blocks to create the main caverns, and then two noise2D blocks which
-# close the caverns off with a ceiling and floor. Whatever value is yielded from
-# the ceiling and floor generators gets added to minHeight or maxHeight.
+# of `generators` to create the main caverns, and then `ceiling` and `floor`
+# blocks which close the caverns off. Whatever value is yielded from the ceiling
+# and floor generators gets added to the bounds of `height`.
 caverns: [
   {
     height: [ 10, 50 ]
@@ -864,8 +864,8 @@ burrows: [
 #                                                                           #
 # ------------------------------------------------------------------------- #
 
-# See stone_layers.cave for an example of stoneLayers. These are just the
-# default values, so you only need to specify the state and maxHeight.
+# See stone_layers.cave for an example of layers. These are just the
+# default values, so you only need to specify the state and height.
 layers: [
   {
     # **This value may not be null**.
@@ -933,7 +933,7 @@ stalactites: [
   }
 ]
 
-# See underground_forest.cave for an example of giantPillars. These are
+# See underground_forest.cave for an example of pillars. These are
 # the defaults. You just need to specify a state.
 pillars: [
   {

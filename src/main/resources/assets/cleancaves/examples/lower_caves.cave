@@ -8,7 +8,7 @@
   # Additional tunnels that spawn at lower heights.
   tunnels: {
     # Spawn less frequencly than in vanilla.
-    frequency: 8
+    count: 8
     # Use a lower height range.
     height: [ 6, 20 ]
     # Less likely to spawn systems -> more even distribution.
