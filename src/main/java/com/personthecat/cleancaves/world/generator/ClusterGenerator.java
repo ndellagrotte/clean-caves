@@ -13,14 +13,19 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class ClusterGenerator extends ListGenerator<ClusterSettings> {
 
-    private final Map<Conditions, List<ClusterInfo>> clusterMap = new IdentityHashMap<>();
+    /**
+     * Clusters grouped by the conditions they spawn under. {@link Conditions} compares by identity,
+     * and the map keeps insertion order so that overlapping clusters are resolved the same way in
+     * every session rather than by wherever the keys happen to hash.
+     */
+    private final Map<Conditions, List<ClusterInfo>> clusterMap = new LinkedHashMap<>();
     private final RandomChunkSelector selector;
 
     public ClusterGenerator(List<ClusterSettings> cfg, World world) {
@@ -91,7 +96,7 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
 
                             if (selector.getBooleanForCoordinates(id, cx, cz, threshold)) {
                                 // Get an RNG unique to this chunk.
-                                final Random localRand = new XoRoShiRo(cx ^ cz ^ clusterSeed);
+                                final Random localRand = new XoRoShiRo(PrimerContext.chunkSeed(clusterSeed, cx, cz));
                                 final int y = cfg.centerHeight().rand(localRand);
                                 // Finalize all values.
                                 final BlockPos origin = new BlockPos(x, y, z);

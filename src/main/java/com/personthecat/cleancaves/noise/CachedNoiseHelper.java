@@ -1,31 +1,61 @@
 package com.personthecat.cleancaves.noise;
 
+import fastnoise.FastNoise;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Holds the noise already computed for the 16x16 column of blocks that is currently being
+ * generated. A cache slot is addressed by a block's position within that area alone, so the values
+ * are only meaningful for coordinates inside of it: everything else must go to the generator.
+ */
 public final class CachedNoiseHelper {
 
-    private static final Map<Integer, Cache> DATA = new ConcurrentHashMap<>();
+    /** The width of the cached area, which is one chunk. */
+    private static final int SIZE = 16;
+
+    /** Keyed by the generator itself, so that only generators producing the same noise share. */
+    private static final Map<FastNoise, Cache> DATA = new ConcurrentHashMap<>();
+
+    /** The lowest block coordinates of the area the caches currently describe. */
+    private static int originX;
+    private static int originZ;
+    private static boolean active;
 
     private CachedNoiseHelper() { }
 
-    public static Cache getOrCreate(int hash) {
-        final Cache pull = DATA.get(hash);
-        if (pull != null) {
-            return pull;
-        }
-        final Cache push = new Cache();
-        DATA.put(hash, push);
-        return push;
+    public static Cache getOrCreate(FastNoise generator) {
+        return DATA.computeIfAbsent(generator, g -> new Cache());
     }
 
-    public static void resetAll() {
-        DATA.forEach((i, c) -> c.reset());
+    /**
+     * Starts caching for a new area, discarding whatever the last one left behind.
+     *
+     * @param minX The lowest block x coordinate of the area.
+     * @param minZ The lowest block z coordinate of the area.
+     */
+    public static void begin(int minX, int minZ) {
+        DATA.values().forEach(Cache::reset);
+        originX = minX;
+        originZ = minZ;
+        active = true;
+    }
+
+    /** Stops caching until the next area begins. */
+    public static void end() {
+        active = false;
     }
 
     public static void removeAll() {
         DATA.clear();
+        active = false;
+    }
+
+    /** Whether noise at this block belongs to the area the caches currently describe. */
+    static boolean covers(int x, int z) {
+        return active && x >= originX && x < originX + SIZE && z >= originZ && z < originZ + SIZE;
     }
 
     /**

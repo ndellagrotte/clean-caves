@@ -95,11 +95,10 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
                 if (!f[i][j]) {
                     continue;
                 }
-                // Convert to absolute coordinates
-                final double cx = (i / 2.0) - r + x;
-                final double cz = (j / 2.0) - r + z;
-                final int absX = ((int) cx * 16 + 8) + (cx % 1 == 0 ? 8 : 0);
-                final int absZ = ((int) cz * 16 + 8) + (cz % 1 == 0 ? 8 : 0);
+                // Convert to absolute coordinates. Even indices are chunk centers; the odd ones
+                // between them are the interpolated points, which sit on the shared chunk edge.
+                final int absX = (Math.floorDiv(i, 2) - r + x) * 16 + 8 + (i % 2 == 0 ? 0 : 8);
+                final int absZ = (Math.floorDiv(j, 2) - r + z) * 16 + 8 + (j % 2 == 0 ? 0 : 8);
                 final int translateY = (int) noise.GetAdjustedNoise(absX, absZ);
                 border.add(new ChunkTestData(absX, absZ, translateY));
             }
@@ -226,7 +225,7 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
     private void fillInvalidChunks(int chunkX, int chunkZ) {
         final int range = ConfigFile.biomeRange;
         for (int cx = chunkX - range; cx <= chunkX + range; cx++) {
-            for (int cz = chunkZ - range; cz < chunkZ + range; cz++) {
+            for (int cz = chunkZ - range; cz <= chunkZ + range; cz++) {
                 final int centerX = cx * 16 + 8;
                 final int centerZ = cz * 16 + 8;
                 if (!this.conditions.region.GetBoolean(centerX, centerZ)) {

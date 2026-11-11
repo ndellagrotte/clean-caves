@@ -10,7 +10,7 @@ public class CachedNoiseGenerator extends FastNoise {
     // WIP. This should probably use a builder instead of copying from wrapped.
     public CachedNoiseGenerator(FastNoise wrapped) {
         this.wrapped = wrapped;
-        this.cache = CachedNoiseHelper.getOrCreate(wrapped.hashCode());
+        this.cache = CachedNoiseHelper.getOrCreate(wrapped);
         this.m_seed = wrapped.m_seed;
         this.m_frequency = wrapped.m_frequency;
         this.m_interp = wrapped.m_interp;
@@ -39,10 +39,22 @@ public class CachedNoiseGenerator extends FastNoise {
         this.m_booleanMaxThreshold = wrapped.m_booleanMaxThreshold;
     }
 
+    private static int floor(float value) {
+        final int truncated = (int) value;
+        return value < truncated ? truncated - 1 : truncated;
+    }
+
     @Override
     public float GetNoise(float x, float y) {
-        final int relX = (int) x & 15;
-        final int relY = (int) y & 15;
+        final int blockX = floor(x);
+        final int blockY = floor(y);
+        // Generators also sample other chunks, e.g. for the origin of a tunnel that will reach
+        // this one. Those positions would land on the slots of unrelated blocks.
+        if (!CachedNoiseHelper.covers(blockX, blockY)) {
+            return wrapped.GetNoise(x, y);
+        }
+        final int relX = blockX & 15;
+        final int relY = blockY & 15;
 
         final float reused = cache.getNoise(relX, relY);
         if (reused != 0) {
@@ -55,9 +67,15 @@ public class CachedNoiseGenerator extends FastNoise {
 
     @Override
     public float GetNoise(float x, float y, float z) {
-        final int relX = (int) x & 15;
-        final int relY = (int) y & 255;
-        final int relZ = (int) z & 15;
+        final int blockX = floor(x);
+        final int blockY = floor(y);
+        final int blockZ = floor(z);
+        if (blockY < 0 || blockY > 255 || !CachedNoiseHelper.covers(blockX, blockZ)) {
+            return wrapped.GetNoise(x, y, z);
+        }
+        final int relX = blockX & 15;
+        final int relY = blockY;
+        final int relZ = blockZ & 15;
 
         final float reused = cache.getNoise(relX, relY, relZ);
         if (reused != 0) {

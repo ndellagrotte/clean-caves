@@ -32,7 +32,8 @@ public class TunnelConnector<S extends TunnelSocket> extends TunnelGenerator {
             final int distance = cfg.distance();
             final PrimerData data = new PrimerData(primer, x, z);
 
-            for (int j = 0; j < this.getBranchCount(rand); j++) {
+            final int branches = this.getBranchCount(rand);
+            for (int j = 0; j < branches; j++) {
                 final TunnelPathInfo path = new TunnelPathInfo(cfg, rand, destX, destZ);
                 final int y = this.parent.getTunnelHeight(heightmap, rand, (int) path.getX(), (int) path.getZ(), x, z);
 

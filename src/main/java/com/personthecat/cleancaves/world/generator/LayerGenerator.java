@@ -33,7 +33,7 @@ public class LayerGenerator extends BasicGenerator {
                 if (conditions.biomes.test(b) && conditions.region.GetBoolean(actualX, actualZ)) {
                     for (int y : conditions.getColumn(actualX, actualZ)) {
                         if (cfg.matchers().contains(ctx.primer.getBlockState(x, y, z))) {
-                            if (conditions.noise.GetBoolean(x, z)) {
+                            if (conditions.noise.GetBoolean(actualX, actualZ)) {
                                 ctx.primer.setBlockState(x, y, z, cfg.state());
                             }
                         }

@@ -39,11 +39,12 @@ public class EarlyCaveHook extends MapGenBase {
         final BiomeSearch biomes = BiomeSearch.in(world, x, z);
         final PrimerContext ctx = new PrimerContext(biomes, heightmap, world, x, z, primer);
         ctx.world.rand.setSeed(ctx.world.getSeed());
+        CachedNoiseHelper.begin(x * 16, z * 16);
         for (GeneratorController generator : generators.values()) {
             generator.earlyGenerate(ctx);
             generator.mapGenerate(ctx);
         }
-        CachedNoiseHelper.resetAll();
+        CachedNoiseHelper.end();
     }
 
 }

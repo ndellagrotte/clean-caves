@@ -22,6 +22,9 @@ import java.util.function.Predicate;
  */
 public final class Conditions {
 
+    /** The highest y coordinate a chunk can hold. */
+    private static final int MAX_Y = 255;
+
     /** Any conditions for spawning this feature according to the current biome. */
     public final Predicate<Biome> biomes;
 
@@ -93,11 +96,19 @@ public final class Conditions {
         return settings.blacklistDimensions() ? d -> !nonRedundant.contains(d) : nonRedundant::contains;
     }
 
+    /**
+     * Keeps a column inside the world. Floor and ceiling noise are added to the configured height
+     * without regard for it, and the generators index chunk data with the result directly.
+     */
+    private static int clampY(int y) {
+        return Math.max(0, Math.min(MAX_Y, y));
+    }
+
     /** Get the current height range when given two absolute coordinates. */
     public Range getColumn(int x, int z) {
         final int min = this.height.min() + (int) this.floor.GetAdjustedNoise((float) x, (float) z);
         final int max = this.height.max() + (int) this.ceiling.GetAdjustedNoise((float) x, (float) z);
-        return Range.checkedOrEmpty(min, max);
+        return Range.checkedOrEmpty(clampY(min), clampY(max));
     }
 
     /** As above, but clamped to the surface recorded in the current chunk's heightmap. */
@@ -105,7 +116,7 @@ public final class Conditions {
         final int min = this.height.min() + (int) this.floor.GetAdjustedNoise((float) x, (float) z);
         final int max = Math.min(this.height.max(), heightmap[x & 15][z & 15])
                 + (int) this.ceiling.GetAdjustedNoise((float) x, (float) z);
-        return Range.checkedOrEmpty(min, max);
+        return Range.checkedOrEmpty(clampY(min), clampY(max));
     }
 
 }

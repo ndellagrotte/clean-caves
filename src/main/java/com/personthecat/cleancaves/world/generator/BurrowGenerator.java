@@ -105,7 +105,7 @@ public class BurrowGenerator extends WorldCarver implements TunnelSocket {
     private void fillInvalidChunks(int chunkX, int chunkZ) {
         final int range = ConfigFile.biomeRange;
         for (int cx = chunkX - range; cx <= chunkX + range; cx++) {
-            for (int cz = chunkZ - range; cz < chunkZ + range; cz++) {
+            for (int cz = chunkZ - range; cz <= chunkZ + range; cz++) {
                 final int centerX = cx * 16 + 8;
                 final int centerZ = cz * 16 + 8;
                 if (!this.conditions.region.GetBoolean(centerX, centerZ)) {

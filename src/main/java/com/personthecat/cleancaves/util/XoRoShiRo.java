@@ -12,7 +12,7 @@ import java.util.Random;
 public class XoRoShiRo extends Random {
 
     private SplitMixRandom mixer;
-    private long seed = Long.MIN_VALUE;
+    private long seed;
     private long p0;
     private long p1; // The initialization words for the current seed
     private long s0;
@@ -20,6 +20,9 @@ public class XoRoShiRo extends Random {
     private boolean hasSavedState; // True if we can be quickly reseed by using resetting the words
 
     public XoRoShiRo(final long seed) {
+        // Random's own constructor has already called setSeed with a seed taken from the clock.
+        // Discard that state so it can never be mistaken for a saved copy of this seed.
+        this.hasSavedState = false;
         this.setSeed(seed);
     }
 

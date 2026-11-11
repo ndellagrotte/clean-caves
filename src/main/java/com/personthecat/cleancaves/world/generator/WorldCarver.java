@@ -75,26 +75,31 @@ public abstract class WorldCarver extends BasicGenerator {
         return false;
     }
 
+    /**
+     * Fills the floor below (x, y, z) with a pond, one layer at a time, stopping at the bottom of the
+     * world or at the first block that fails the integrity roll.
+     *
+     * @return The number of layers that were filled.
+     */
     private static int placeCountPond(ConfiguredPond pond, ChunkPrimer primer, Random rand, int x, int y, int z) {
+        final int depth = Math.min(pond.cfg.depth(), y);
         if (pond.cfg.integrity() == 1.0 && pond.cfg.states().size() > 0) {
             final IBlockState state = pond.cfg.states().get(0);
-            for (int i = y - 1; i > y - pond.cfg.depth() - 1; i--) {
-                primer.setBlockState(x, i, z, state);
+            for (int i = 1; i <= depth; i++) {
+                primer.setBlockState(x, y - i, z, state);
             }
-            return y - pond.cfg.depth();
+            return depth;
         }
-        int offY = y;
-        for (int i = 1; i < pond.cfg.depth() + 1; i++) {
-            offY = y - i;
+        for (int i = 1; i <= depth; i++) {
             for (IBlockState state : pond.cfg.states()) {
                 if (rand.nextFloat() <= pond.cfg.integrity()) {
-                    primer.setBlockState(x, y, z, state);
+                    primer.setBlockState(x, y - i, z, state);
                 } else {
-                    return offY + 1;
+                    return i - 1;
                 }
             }
         }
-        return offY;
+        return depth;
     }
 
     // Avoids redundant noise calculations, if applicable.
@@ -280,6 +285,10 @@ public abstract class WorldCarver extends BasicGenerator {
     private void evaluatePond(World world, ChunkPrimer primer, Random rand, int x, int y, int z, int cx, int cz) {
         final int absX = cx * 16 + x;
         final int absZ = cz * 16 + z;
+        // There is no floor to fill below the bottom of the world.
+        if (y < 1) {
+            return;
+        }
         final IBlockState candidate = primer.getBlockState(x, y - 1, z);
         if (Blocks.AIR.equals(candidate.getBlock())) {
             return;
@@ -290,10 +299,12 @@ public abstract class WorldCarver extends BasicGenerator {
         if (anyAir(getSurrounding(world, primer, x, y - 1, z, absX, absZ))) {
             return;
         }
+        // The depth already filled. A later pond only gets to overwrite an earlier one when it is
+        // at least as deep, so that a shallow pond never leaves a deeper one half replaced.
         int d = 1;
         for (ConfiguredPond pond : this.decorators.ponds) {
             if (pond.cfg.depth() >= d && pond.canGenerate(rand, candidate, x, y, z, cx, cz)) {
-                d = placeCountPond(pond, primer, rand, x, y, z);
+                d = Math.max(d, placeCountPond(pond, primer, rand, x, y, z));
             }
         }
     }

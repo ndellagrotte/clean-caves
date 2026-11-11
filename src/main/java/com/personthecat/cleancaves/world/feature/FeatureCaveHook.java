@@ -22,11 +22,13 @@ public class FeatureCaveHook implements IWorldGenerator {
         final Map<String, GeneratorController> generators = CleanCaves.instance.loadGenerators(world);
         final int[][] heightmap = HeightMapLocator.getHeightFromWorld(world, chunkX, chunkZ);
 
+        // Features are placed in the area offset by half a chunk, as with vanilla population.
+        CachedNoiseHelper.begin(chunkX * 16 + 8, chunkZ * 16 + 8);
         for (GeneratorController generator : generators.values()) {
             final WorldContext ctx = new WorldContext(heightmap, generator, rand, chunkX, chunkZ, world);
             generator.featureGenerate(ctx);
         }
-        CachedNoiseHelper.resetAll();
+        CachedNoiseHelper.end();
     }
 
 }

@@ -95,7 +95,8 @@ public class TunnelGenerator extends MapGenerator {
             final int distance = this.cfg.distance();
             final PrimerData data = new PrimerData(primer, x, z);
 
-            for (int j = 0; j < this.getBranchCount(rand); j++) {
+            final int branches = this.getBranchCount(rand);
+            for (int j = 0; j < branches; j++) {
                 final TunnelPathInfo path = new TunnelPathInfo(this.cfg, rand, destX, destZ);
                 if (this.conditions.getColumn((int) path.getX(), (int) path.getZ()).contains((int) path.getY())) {
                     if (this.conditions.noise.GetBoolean(path.getX(), path.getY(), path.getZ())) {

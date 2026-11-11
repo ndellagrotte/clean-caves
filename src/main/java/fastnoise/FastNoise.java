@@ -90,7 +90,7 @@ public class FastNoise {
 	}
 
 	// Two generators configured identically produce identical noise, so they are treated as the
-	// same generator. CachedNoiseHelper relies on this: it keys its per-chunk cache on hashCode(),
+	// same generator. CachedNoiseHelper relies on this: it keys its per-chunk cache on the generator,
 	// letting equivalently-configured generators share one cache entry. The five fields above are
 	// excluded because they only rescale the output after the noise itself has been computed.
 	@Override
