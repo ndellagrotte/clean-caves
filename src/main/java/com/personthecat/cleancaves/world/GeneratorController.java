@@ -40,23 +40,47 @@ public record GeneratorController(List<TunnelGenerator> tunnels,
         List<PillarGenerator> pillars,
         List<StructureGenerator> structures) {
 
+    /**
+     * Compiles a preset against a world. The order the generators are constructed in is significant:
+     * every noise generator without an explicit seed draws its seed from {@code world.rand} as it is
+     * built, so reordering these statements reseeds the preset's noise.
+     */
     public static GeneratorController from(CavePreset preset, World world) {
+        final List<TunnelGenerator> tunnels = preset.tunnels()
+                .stream()
+                .map(t -> new TunnelGenerator(t, world))
+                .toList();
+        final List<RavineGenerator> ravines = preset.ravines()
+                .stream()
+                .map(r -> new RavineGenerator(r, world))
+                .toList();
+        final List<LayerGenerator> layers = preset.layers().stream().map(l -> new LayerGenerator(l, world)).toList();
+        final List<StalactiteGenerator> stalactites = preset.stalactites()
+                .stream()
+                .map(s -> new StalactiteGenerator(s, world))
+                .toList();
+        final List<PillarGenerator> pillars = preset.pillars()
+                .stream()
+                .map(p -> new PillarGenerator(p, world))
+                .toList();
+        final List<StructureGenerator> structures = preset.structures()
+                .stream()
+                .map(s -> new StructureGenerator(s, world))
+                .toList();
+
         // Clusters with no matchers apply everywhere; the rest only within a matching layer.
         final List<ClusterSettings> global = new ArrayList<>();
         final List<ClusterSettings> layered = new ArrayList<>();
         preset.clusters().forEach(c -> (c.matchers().isEmpty() ? global : layered).add(c));
+        final ClusterGenerator globalClusters = new ClusterGenerator(global, world);
+        final ClusterGenerator layeredClusters = new ClusterGenerator(layered, world);
 
         final Caverns caverns = mapCaverns(preset.caverns(), world);
         final Burrows burrows = mapBurrows(preset.burrows(), world);
 
-        return new GeneratorController(preset.tunnels().stream().map(t -> new TunnelGenerator(t, world)).toList(),
-                preset.ravines().stream().map(r -> new RavineGenerator(r, world)).toList(), caverns.generators,
-                caverns.deferred, burrows.generators,
-                preset.layers().stream().map(l -> new LayerGenerator(l, world)).toList(), caverns.connectors,
-                burrows.connectors, new ClusterGenerator(global, world), new ClusterGenerator(layered, world),
-                preset.stalactites().stream().map(s -> new StalactiteGenerator(s, world)).toList(),
-                preset.pillars().stream().map(p -> new PillarGenerator(p, world)).toList(),
-                preset.structures().stream().map(s -> new StructureGenerator(s, world)).toList());
+        return new GeneratorController(tunnels, ravines, caverns.generators, caverns.deferred, burrows.generators,
+                layers, caverns.connectors, burrows.connectors, globalClusters, layeredClusters, stalactites, pillars,
+                structures);
     }
 
     private static Caverns mapCaverns(List<CavernSettings> caverns, World world) {
