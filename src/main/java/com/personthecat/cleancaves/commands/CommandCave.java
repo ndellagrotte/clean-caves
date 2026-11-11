@@ -13,6 +13,7 @@ import com.personthecat.cleancaves.noise.CachedNoiseHelper;
 import com.personthecat.cleancaves.util.Calculator;
 import com.personthecat.cleancaves.util.CaveLinter;
 import com.personthecat.cleancaves.util.HjsonTools;
+import com.personthecat.cleancaves.util.Result;
 import com.personthecat.cleancaves.world.feature.StructureSpawner;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -273,24 +274,29 @@ public class CommandCave extends CommandBase {
     private static void enbableOrDisable(ICommandSender sender, String[] args, boolean enabled) {
         requireArgs(args, 1);
         final Path located = locateFile(args);
-        final Path dir = located.getParent();
         final String key = CavePreset.Keys.ENABLED;
-        PresetReader.getPresetJson(located).ifPresent(cave -> {
-            if (cave.has(key)) {
-                cave.set(key, enabled);
-            } else {
-                cave.add(key, enabled, "Whether the preset is enabled globally.");
-            }
-            final Path f = enabled && dir != CaveInit.presetDir() ? CaveInit.presetDir().resolve(located.getFileName()) : located;
-            // Try to write the updated preset to the disk.
-            writeJson(cave, f).expectF("Error writing to {}", f.getFileName().toString());
-        });
+        final Optional<JsonObject> json = PresetReader.getPresetJson(located);
+        if (!json.isPresent()) {
+            sendError(sender, "The file could not be parsed.");
+            return;
+        }
+        final JsonObject cave = json.get();
+        if (cave.has(key)) {
+            cave.set(key, enabled);
+        } else {
+            cave.add(key, enabled, "Whether the preset is enabled globally.");
+        }
+        // Only the preset folder is loaded, so enabling a file from anywhere else copies it in.
+        final boolean outside = !located.normalize().startsWith(CaveInit.presetDir().normalize());
+        final Path f = enabled && outside ? CaveInit.presetDir().resolve(located.getFileName()) : located;
+        // Try to write the updated preset to the disk.
+        writeJson(cave, f).expectF("Error writing to {}", f.getFileName().toString());
         sendMessage(sender, "Preset " + (enabled ? "enabled" : "disabled") + " successfully.");
     }
 
     /** A command for listing and enabling / disabling presets. */
     private static void list(ICommandSender sender, String[] args) {
-        final Path dir = args.length > 0 ? CaveInit.caveDir().resolve(args[0]) : CaveInit.presetDir();
+        final Path dir = args.length > 0 ? resolveInCaveDir(args[0]) : CaveInit.presetDir();
         if (Files.exists(dir)) {
             listRaw(sender, dir.toString());
         } else {
@@ -301,6 +307,10 @@ public class CommandCave extends CommandBase {
     private static void listRaw(ICommandSender sender, String... args) {
         requireArgs(args, 1);
         final Path dir = Paths.get(args[0]);
+        if (!isInCaveDir(dir)) {
+            displayDirectories(sender);
+            return;
+        }
         ITextComponent msg = tcs("") // Parent has no formatting.
                 .appendSibling(VIEW_BUTTON.createCopy())
                 .appendSibling(tcs("\n"));
@@ -308,7 +318,10 @@ public class CommandCave extends CommandBase {
         final List<Path> directories = new ArrayList<>();
         final List<Path> enabled = new ArrayList<>();
         final List<Path> disabled = new ArrayList<>();
-        directories.add(dir.getParent());
+        // Offer the way back up, but never out of the mod's own folder.
+        if (!dir.normalize().equals(CaveInit.caveDir().normalize())) {
+            directories.add(dir.getParent());
+        }
         for (Path file : listFiles(dir).orElse(List.of())) {
             if (CaveInit.validExtension(file)) {
                 (isPresetEnabled(file) ? enabled : disabled).add(file);
@@ -341,7 +354,7 @@ public class CommandCave extends CommandBase {
         requireArgs(args, 1);
         final Optional<Path> located;
         if (args.length > 1) {
-            final Path dir = CaveInit.caveDir().resolve(args[1]);
+            final Path dir = resolveInCaveDir(args[1]);
             located = CaveInit.locatePreset(dir, args[0]);
         } else {
             located = locateRecursively(CaveInit.caveDir(), args[0]);
@@ -362,7 +375,7 @@ public class CommandCave extends CommandBase {
         final Optional<Path> located = CaveInit.locatePreset(args[0]);
         if (located.isPresent()) {
             final Path f = located.get();
-            final Path dir = CaveInit.caveDir().resolve(args[1]);
+            final Path dir = resolveInCaveDir(args[1]);
             if (!Files.exists(dir)) {
                 ensureDirExists(dir).throwIfPresent();
                 sendMessage(sender, f("Created folder: {}", dir.getFileName().toString()));
@@ -389,7 +402,7 @@ public class CommandCave extends CommandBase {
     }
 
     private static void cleanPresets(ICommandSender sender, String[] args) {
-        final Path dir = args.length > 0 ? CaveInit.caveDir().resolve(args[0]) : CaveInit.presetDir();
+        final Path dir = args.length > 0 ? resolveInCaveDir(args[0]) : CaveInit.presetDir();
         if (!Files.exists(dir)) {
             displayDirectories(sender);
         } else if (dir.equals(CaveInit.backupDir())) {
@@ -506,7 +519,11 @@ public class CommandCave extends CommandBase {
         final String extension = toJson ? ".json" : ".cave";
         final Path newPreset = CaveInit.presetDir().resolve(noExtension(presetFile) + extension);
         // The output file's extension determines the format.
-        writeJson(json.get(), newPreset);
+        final Result<IOException> written = writeJson(json.get(), newPreset);
+        if (written.isErr()) {
+            sendError(sender, "The converted file could not be written. The original was left in place.");
+            return;
+        }
         backup(presetFile);
         try {
             Files.delete(presetFile);
@@ -548,10 +565,31 @@ public class CommandCave extends CommandBase {
         return tcs("\n / " + file.getFileName().toString() + " ").appendSibling(viewButton(file.toString()));
     }
 
-    private static String getRelativeDir(Path file) {
-        final String path = file.toString();
-        final String cgPath = CaveInit.caveDir().toString();
-        return path.substring(cgPath.length());
+    /**
+     * Names a folder relative to the mod's config folder, in the form the subcommands taking a
+     * directory argument expect. The config folder itself is {@code "."}.
+     */
+    private static String getRelativeDir(Path dir) {
+        final Path relative = CaveInit.caveDir().normalize().relativize(dir.normalize());
+        final String name = relative.toString().replace('\\', '/');
+        return name.isEmpty() ? "." : name;
+    }
+
+    private static boolean isInCaveDir(Path path) {
+        return path.normalize().startsWith(CaveInit.caveDir().normalize());
+    }
+
+    /**
+     * Resolves a folder argument against the mod's config folder. A leading separator is ignored,
+     * so {@code /presets} and {@code presets} are the same folder, and anything that would land
+     * outside of the config folder is refused.
+     */
+    private static Path resolveInCaveDir(String relative) {
+        final Path resolved = CaveInit.caveDir().resolve(relative.replaceFirst("^[/\\\\]+", ""));
+        if (!isInCaveDir(resolved)) {
+            throw runExF("{} is not inside of the config folder.", relative);
+        }
+        return resolved;
     }
 
     /** Determines whether the input file points to a preset that is enabled. */
@@ -561,7 +599,7 @@ public class CommandCave extends CommandBase {
 
     private static Path locateFile(String[] args) {
         if (args.length > 1) {
-            final Path dir = CaveInit.caveDir().resolve(args[1]);
+            final Path dir = resolveInCaveDir(args[1]);
             final Optional<Path> located = CaveInit.locatePreset(dir, args[0]);
             return located.orElseThrow(() -> runEx("File not found."));
         } else {
@@ -913,10 +951,14 @@ public class CommandCave extends CommandBase {
 
     private void saveMemory(ICommandSender sender, String[] args) {
         requireArgs(args, 1);
-        final Path dir = args.length > 1 ? CaveInit.caveDir().resolve(args[1]) : CaveInit.importDir();
+        final Path dir = args.length > 1 ? resolveInCaveDir(args[1]) : CaveInit.importDir();
         final String filename = extension(args[0]).isEmpty() ? args[0] + ".cave" : args[0];
-        HjsonTools.writeJson(this.memory, dir.resolve(filename));
-        sendMessage(sender, "Recorded file to " + dir.getFileName().toString());
+        final Result<IOException> written = ensureDirExists(dir);
+        if (written.isOk() && HjsonTools.writeJson(this.memory, dir.resolve(filename)).isOk()) {
+            sendMessage(sender, "Recorded file to " + dir.getFileName().toString());
+        } else {
+            sendError(sender, "Unable to write " + filename + " to " + dir.getFileName().toString());
+        }
     }
 
     private void clearMemory(ICommandSender sender) {
