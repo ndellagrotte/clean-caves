@@ -471,8 +471,8 @@ public class PresetExpander {
      *      exp: 64.0
      *    }
      * </pre>
-     * </p>
      *
+     * <p>
      * Remember that these objects are evaluated in place, and as such,
      * the original contents are destroyed.
      *

@@ -36,13 +36,20 @@ field. Both are rewritten on each launch, so edit a copy.
 
 ## Building
 
+The build uses [CleanroomGradle](https://github.com/CleanroomMC/CleanroomGradle) and
+[Conventions](https://github.com/CleanroomMC/Conventions). Requires JDK 25 and Cleanroom 0.7.0 or above.
+
 ```bash
-./gradlew build        # compile, run unit tests, produce the remapped jar
+./gradlew build        # compile, unit tests, Checkstyle, formatter check, and the mod jar in build/libs
 ./gradlew runClient
 ./gradlew runServer
 ```
 
-Gradle provisions the JDK 25 toolchain automatically.
+`./gradlew clearSkiesApply formatJavaApply` fixes formatting. The vendored `org.hjson` and `fastnoise` sources are
+excluded from the style tools.
+
+The version is computed from git tags: tag `1.0.0` on `main` to release it, and `./gradlew -q printVersion` prints
+the current value. `@{NAME}` markers in classes and resources are replaced at build time from `tokens.properties`.
 
 ## License
 
