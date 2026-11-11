@@ -116,7 +116,7 @@ public final class PresetReader {
                     if (!skipInvalid) {
                         throw e;
                     }
-                    log.error("Skipping {}: {}", file.getFileName(), describe(e));
+                    log.error("Skipping {}: {}", file.getFileName(), e.getMessage());
                 }
             }
         }
@@ -131,17 +131,9 @@ public final class PresetReader {
             if (!ConfigFile.ignoreInvalidPresets) {
                 throw e;
             }
-            log.error("Skipping {}: {}", file.getFileName(), describe(e));
+            log.error("Skipping {}: {}", file.getFileName(), e.getMessage());
             return false;
         }
-    }
-
-    /** The message of an error together with that of its cause, which is where a parser's detail sits. */
-    private static String describe(Throwable e) {
-        final Throwable cause = e.getCause();
-        return cause == null || cause.getMessage() == null
-                ? String.valueOf(e.getMessage())
-                : e.getMessage() + " (" + cause.getMessage() + ")";
     }
 
     /** Converts a map of (file -> json) to (filename -> POJO). */
@@ -219,7 +211,7 @@ public final class PresetReader {
         try {
             return extension(file).equals("json") ? JsonValue.readJSON(text) : JsonValue.readHjson(text);
         } catch (final ParseException e) {
-            throw runEx(f("Error reading {}", file.getFileName()), e);
+            throw runEx(f("Error reading {}: {}", file.getFileName(), e.getMessage()), e);
         }
     }
 
