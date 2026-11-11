@@ -109,7 +109,7 @@ public record StructureSettings(ConditionSettings conditions,
         private String name;
         private PlacementSettings placement = new PlacementSettings().setReplacedBlock(Blocks.STONE);
         private List<IBlockState> matchers = List.of(Blocks.STONE.getDefaultState());
-        private Direction.Container directions = Direction.Container.none();
+        private Direction.Container directions = Direction.Container.all();
         private List<BlockPos> airChecks = List.of();
         private List<BlockPos> solidChecks = List.of();
         private List<BlockPos> nonSolidChecks = List.of();

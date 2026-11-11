@@ -157,7 +157,7 @@ public class StalactiteGenerator extends FeatureGenerator {
                     continue;
                 }
                 final Range height = conditions.getColumn(dx, dz);
-                if (height.diff() != 0 && conditions.region.GetBoolean(dz, dz)) {
+                if (height.diff() != 0 && conditions.region.GetBoolean(dx, dz)) {
                     final int maxY = Math.min(info.heightmap[dx & 15][dz & 15] - SURFACE_ROOM, height.max());
                     if (maxY <= height.min()) {
                         continue;
@@ -181,14 +181,17 @@ public class StalactiteGenerator extends FeatureGenerator {
     private void checkSpace(World world, Random rand, BlockPos pos) {
         final int length = this.cfg.length().rand(rand);
         final int needed = this.cfg.space() + length;
-        final int space = this.getSpace(world, pos, needed);
+        // A speleothem also grows up from the floor, so it has to know where the floor is. Looking
+        // one block further than it may be tells a floor at the limit apart from none at all.
+        final int space = this.getSpace(world, pos, this.speleothem ? 2 * needed + 1 : needed);
         if (this.speleothem && space > 2 * needed) {
             return;
         }
         if (space >= needed) {
             this.generateSingle(world, rand, pos, length, !this.stalactite);
             if (this.speleothem) {
-                this.generateSingle(world, rand, pos.down(space), length, true);
+                // `space` open blocks lie below the ceiling, so the floor is the block after them.
+                this.generateSingle(world, rand, pos.down(space + 1), length, true);
             }
         }
     }
@@ -230,11 +233,13 @@ public class StalactiteGenerator extends FeatureGenerator {
 
     private void placeAll(World world, Random rand, int length, boolean up, BlockPos[] positions) {
         for (BlockPos pos : positions) {
+            // Each column varies from the length it was given, not from the column before it.
+            int columnLength = length;
             if (!cfg.symmetrical()) {
                 final int min = length * 9 / 11;
-                length = rand.nextInt(length - min + 1) + min;
+                columnLength = rand.nextInt(length - min + 1) + min;
             }
-            this.findPlace(world, pos, length, up);
+            this.findPlace(world, pos, columnLength, up);
         }
     }
 

@@ -10,6 +10,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Rotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.gen.structure.template.PlacementSettings;
 import net.minecraft.world.gen.structure.template.Template;
 
 import java.util.Optional;
@@ -28,10 +29,15 @@ public class StructureGenerator extends FeatureGenerator {
         this.structure = StructureSpawner.getTemplate(cfg.name(), world);
     }
 
-    /** Moves each dimension by half of `size` in the opposite direction. */
-    private static BlockPos centerBySize(BlockPos toCenter, BlockPos size) {
-        final int xOffset = (size.getX() / 2) * -1;
-        final int zOffset = (size.getZ() / 2) * -1;
+    /**
+     * Finds the origin that centers a structure on a position. A template is rotated and mirrored
+     * about its origin rather than its middle, so depending on the placement it extends to either
+     * side of that origin. This measures where the far corner ends up and shifts by the difference.
+     */
+    static BlockPos centerBySize(BlockPos toCenter, BlockPos size, PlacementSettings placement) {
+        final BlockPos far = Template.transformedBlockPos(placement, new BlockPos(size.getX() - 1, 0, size.getZ() - 1));
+        final int xOffset = -((Math.abs(far.getX()) + 1) / 2) - Math.min(0, far.getX());
+        final int zOffset = -((Math.abs(far.getZ()) + 1) / 2) - Math.min(0, far.getZ());
         return toCenter.add(xOffset, 0, zOffset);
     }
 
@@ -52,7 +58,7 @@ public class StructureGenerator extends FeatureGenerator {
     @Override
     protected void doGenerate(WorldContext ctx) {
         final BlockPos center = new BlockPos(ctx.offsetX, 0, ctx.offsetZ);
-        if (conditions.biomes.test(ctx.world.getBiomeForCoordsBody(center))) {
+        if (conditions.biomes.test(ctx.world.getBiome(center))) {
             for (int i = 0; i < cfg.count(); i++) {
                 if (ctx.rand.nextDouble() <= cfg.chance()) {
                     this.generateSingle(ctx);
@@ -68,7 +74,7 @@ public class StructureGenerator extends FeatureGenerator {
         spawnPos.ifPresent(pos -> {
             if (allChecksPass(pos, ctx.world)) {
                 this.preStructureSpawn(ctx, pos);
-                final BlockPos adjusted = offset(centerBySize(pos, structure.getSize()), cfg.offset());
+                final BlockPos adjusted = offset(centerBySize(pos, structure.getSize(), cfg.placement()), cfg.offset());
                 StructureSpawner.spawnStructure(structure, cfg.placement(), ctx.world, adjusted);
             }
         });
@@ -122,7 +128,7 @@ public class StructureGenerator extends FeatureGenerator {
             final Range height = conditions.getColumn(x, z);
             final int maxY = cfg.checkSurface()
                     ? Math.min(info.heightmap[x & 15][z & 15] - SURFACE_ROOM, height.max())
-                    : info.world.getActualHeight();
+                    : Math.min(info.world.getActualHeight(), height.max());
             final int minY = height.min();
             if (minY >= maxY || !conditions.region.GetBoolean(x, z)) {
                 continue;
@@ -327,7 +333,7 @@ public class StructureGenerator extends FeatureGenerator {
     /** All operations related to structures before spawning should be organized herein. */
     private void preStructureSpawn(WorldContext info, BlockPos pos) {
         if (cfg.rotateRandomly()) {
-            final Rotation randRotation = Rotation.values()[info.rand.nextInt(3)];
+            final Rotation randRotation = Rotation.values()[info.rand.nextInt(Rotation.values().length)];
             cfg.placement().setRotation(randRotation);
         }
         if (cfg.debugSpawns()) {

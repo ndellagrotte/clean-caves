@@ -32,7 +32,8 @@ public class PillarGenerator extends FeatureGenerator {
     @Override
     protected void doGenerate(WorldContext ctx) {
         final Random rand = ctx.rand;
-        for (int i = 0; i < rand.nextInt(cfg.count() + 1); i++) {
+        final int count = rand.nextInt(cfg.count() + 1);
+        for (int i = 0; i < count; i++) {
             // Avoid pillars spawning right next to each other.
             final int x = ((rand.nextInt(6) * 2) + 2) + (ctx.chunkX * 16); // 2 to 14
             final int z = ((rand.nextInt(6) * 2) + 1) + (ctx.chunkZ * 16); // 1 to 13

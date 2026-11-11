@@ -35,11 +35,9 @@ public enum Direction {
 
         private static final Container ALL_DIRECTIONS = new Container(true, true, true, true, true, true, true);
 
-        private static final Container NO_DIRECTIONS = new Container(false, false, false, false, false, false, false);
-
-        /** The default when a preset names no directions at all. */
-        public static Container none() {
-            return NO_DIRECTIONS;
+        /** The default when a preset names no directions at all, which is the same as an empty list. */
+        public static Container all() {
+            return ALL_DIRECTIONS;
         }
 
         /** Converts a direction list into a Direction.Container. An empty list means all. */
