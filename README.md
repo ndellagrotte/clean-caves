@@ -19,9 +19,10 @@ On first launch the mod seeds `config/cleancaves/`:
 
 | Directory | Contents |
 |---|---|
-| `presets/` | Active presets. Ships with `cat`, `cat_lite`, `geodes`, `ore_veins`. |
+| `presets/` | Active presets. Ships with twenty that run on a vanilla game — stone layers, cliffs, caverns, ravines, lush caves — described in [docs/default-presets.md](docs/default-presets.md). |
 | `examples/` | 15 further presets to copy into `presets/` — caverns, ravines, spirals, flooded vanilla, underground forest, and more. |
 | `imports/` | Shared definitions used by the presets, including `defaults.cave` (bound to `$VANILLA` in every preset). |
+| `structures/` | NBT templates used by `examples/underground_forest.cave`. |
 | `generated/` | Fully-expanded presets, written when `autoGenerate` is on. Useful for debugging the import system. |
 | `backup/` | Rotating backups made before a preset is overwritten. |
 
