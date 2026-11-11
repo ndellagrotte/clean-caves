@@ -9,9 +9,10 @@ stalactites, pillars, and NBT structures — is described in Hjson preset files 
 `config/cleancaves/presets/`, with an import and macro system for sharing definitions between them.
 
 This is a modernized port of [Cave Generator](https://github.com/PersonTheCat/CaveGenerator) by
-PersonTheCat. The generation behaviour and the preset format are unchanged; the code has been moved
-to Java 25 and the Cleanroom toolchain, and the Lombok annotation processor has been removed in
-favour of records and hand-written builders.
+PersonTheCat. The preset format is unchanged; the code has been moved to Java 25 and the Cleanroom
+toolchain, and the Lombok annotation processor has been removed in favour of records and
+hand-written builders. Generation is not identical to Cave Generator's: a number of its bugs are
+fixed here, listed under [Differences from Cave Generator](#differences-from-cave-generator).
 
 ## Presets
 
@@ -34,6 +35,44 @@ field. Both are rewritten on each launch, so edit a copy.
 `/cave <subcommand>` — `reload`, `list`, `test`, `jump`, `combine`, `enable`, `disable`, `new`,
 `copy`, `move`, `delete`, `rename`, `expand`, `compress`, `import`, `eval`, and more. Run
 `/cave help` in game for the full list.
+
+## Differences from Cave Generator
+
+A preset written for Cave Generator 1.x loads here, with two caveats. Presets still using
+pre-1.0 key names (`stoneLayers`, `scaleY`, `minHeight`/`maxHeight`, ...) are no longer translated on
+load; the startup log lists every key a preset contains that nothing read. And the same seed does
+not produce the same caves, because these Cave Generator bugs are fixed:
+
+Settings that had no effect, or the wrong one:
+
+- A scalable value written as a bare number (`stretch: 1.5`) was truncated to a whole number.
+- Preset-level `blacklistDimensions` toggled the biome blacklist, and preset-level `region` was ignored.
+- `region.invert` was ignored.
+- A structure with no `directions` never spawned; it now spawns in every direction, as documented.
+- `checkSurface: false` on a structure also dropped the upper bound of its `height`.
+
+Terrain:
+
+- Layer `noise` repeated identically in every chunk.
+- Chunks mirrored across the diagonal (and all chunks on it) rolled identical decoration and clusters.
+- Overlapping clusters could resolve differently from one launch to the next.
+- Region borders were not detected on the +Z side of a chunk.
+- `wallInterpolation` placed its border points 8 blocks off.
+- Ponds with partial integrity were written into the air above the floor, and only the first pond in a list ever placed.
+- Columns pushed outside of y 0-255 by floor or ceiling noise crashed or wrote into the next column.
+- The number of tunnels per system and of pillars per chunk was re-rolled on every loop pass, skewing both low.
+- Noise with `cache: true` could return the value of an unrelated block when a generator sampled outside the current chunk.
+- Stalactite `region` was sampled along the world's diagonal; speleothems were built without finding the floor;
+  asymmetrical stalactites shrank around the ring.
+- `rotateRandomly` never chose one of the four rotations, and rotated structures were placed off-center.
+
+Preset syntax:
+
+- `$FUNC(1,2)` needs no space after the comma.
+- Variables that refer to each other are reported instead of hanging the game.
+- Arithmetic accepts `.5` and `-(2 + 3)`; an empty string or a version such as `1.0.0` is no longer taken for arithmetic.
+- A root-level `$VANILLA: ALL` may be written anywhere in the preset without overriding the keys above it.
+  Cave Generator achieved this by rewriting the file; here the file is left as written.
 
 ## Building
 
