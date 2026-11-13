@@ -1,6 +1,7 @@
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla equivalents
-# (red granite->granite, gneiss->andesite, limestone->diorite, shale->brown
-#  terracotta, shale sandstone->red sandstone). Mutated mesa biomes added.
+# Vanilla refactor: UndergroundBiomes rocks (red granite, gneiss, limestone,
+# shale) were replaced with plain stone; shale sandstone->red sandstone. Layers
+# only replace plain stone, so the red sandstone layer has a floor to keep it
+# from also replacing the stone below it. Mutated mesa biomes added.
 {
   biomes: {
     names: [
@@ -15,7 +16,7 @@
   layers: [
     {
       #red granite
-      state: minecraft:stone:1
+      state: minecraft:stone
       height: [ 0, 16 ]
       ceiling: {
         frequency: 0.015
@@ -24,7 +25,7 @@
     }
     {
       #gneiss
-      state: minecraft:stone:5
+      state: minecraft:stone
       height: [ 0, 48 ]
       ceiling: {
         frequency: 0.015
@@ -32,7 +33,7 @@
     }
     {
       #limestone
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 58 ]
       ceiling: {
         frequency: 0.015
@@ -41,7 +42,7 @@
     }
     {
       #shale
-      state: minecraft:stained_hardened_clay:12
+      state: minecraft:stone
       height: [ 0, 204 ]
       ceiling: {
         frequency: 0.9
@@ -51,7 +52,11 @@
     {
       #shale sandstone
       state: minecraft:red_sandstone
-      height: [ 0, 255 ]
+      height: [ 204, 255 ]
+      floor: {
+        frequency: 0.9
+        range: [ -16, 16 ]
+      }
       ceiling: {
         frequency: 0.9
         range: [ 2, 16 ]

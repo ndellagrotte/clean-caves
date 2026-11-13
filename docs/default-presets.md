@@ -37,16 +37,16 @@ has to be added to the matching list there as well as to the assets folder.
 
 | Preset | Function | Modded content replaced |
 | --- | --- | --- |
-| `00_stone_layers_basaltic` | Jungle/Extreme-Hills-Edge strata | UB stones -> granite/andesite/terracotta; BOP biomes removed |
-| `00_stone_layers_cold` | Taiga strata | UB stones -> diorite/terracotta; BOP biomes removed |
-| `00_stone_layers_desert` | Desert strata + desert varnish | UB stones -> sandstone/terracotta; pyrotech limestone -> brown terracotta |
-| `00_stone_layers_frozen` | Frozen-biome strata | UB stones -> granite/andesite/diorite; BOP hard ice -> packed ice |
-| `00_stone_layers_generic` | Plains/forest/hills/savanna strata | UB stones -> granite/andesite/diorite/terracotta; BOP biomes removed |
-| `00_stone_layers_mesa` | Mesa strata | UB stones -> vanilla rocks + red sandstone; mutated mesa biomes added |
-| `00_stone_layers_mudstones` | Swamp/river strata | UB stones -> granite/terracotta/hardened clay; BOP biomes removed |
-| `00_stone_layers_ocean` | Ocean-floor strata | UB stones -> granite/andesite/diorite |
-| `00_stone_layers_stone_beach` | Stone-beach strata | UB stones -> diorite/terracotta |
-| `00_stone_layers_volcanic` | Mushroom-island strata | UB stones -> granite/terracotta |
+| `00_stone_layers_basaltic` | Jungle/Extreme-Hills-Edge strata | UB stones -> stone; BOP biomes removed |
+| `00_stone_layers_cold` | Taiga strata | UB stones -> stone; BOP biomes removed |
+| `00_stone_layers_desert` | Desert strata + desert varnish | UB stones -> stone; UB sandstone/sand -> sandstone; pyrotech limestone -> brown terracotta |
+| `00_stone_layers_frozen` | Frozen-biome strata | UB stones -> stone; BOP hard ice -> packed ice |
+| `00_stone_layers_generic` | Plains/forest/hills/savanna strata | UB stones -> stone; BOP biomes removed |
+| `00_stone_layers_mesa` | Mesa strata | UB stones -> stone; UB sandstone -> red sandstone; mutated mesa biomes added |
+| `00_stone_layers_mudstones` | Swamp/river strata | UB stones -> stone; BOP biomes removed |
+| `00_stone_layers_ocean` | Ocean-floor strata | UB stones -> stone |
+| `00_stone_layers_stone_beach` | Stone-beach strata | UB stones -> stone |
+| `00_stone_layers_volcanic` | Mushroom-island strata | UB stones -> stone |
 | `01_arid_cliffs` | Terrain sculptor | biometweaker atacamian_desert -> vanilla Desert Hills; weathered dirt -> coarse dirt; komatiite -> andesite |
 | `01_overgrown_cliffs` | Terrain sculptor | BOP overgrown_cliffs -> vanilla Extreme Hills+ M; BOP grass -> grass; shale -> dirt |
 | `01_tropics_cliffs` | Terrain sculptor | BOP coral_reef -> vanilla Deep Ocean; BOP grass -> grass; shale -> dirt |
@@ -76,24 +76,24 @@ has to be added to the matching list there as well as to the assets folder.
 
 | UB block | Rock | Vanilla substitute |
 | --- | --- | --- |
-| `igneous_stone:0` | red granite | `stone:1` (granite) |
-| `igneous_stone:2` | rhyolite | `stone:1` (granite) |
-| `igneous_stone:3` | andesite | `stone:5` (andesite) |
-| `igneous_stone:4` | gabbro | `stone:5` (andesite) |
-| `igneous_stone:5` | basalt | `stained_hardened_clay:15` (black) |
-| `igneous_stone:6` | komatiite | `stained_hardened_clay:13` (green) |
-| `igneous_stone:7` | dacite | `stone:3` (diorite) |
-| `metamorphic_stone:0` | gneiss | `stone:5` (andesite) |
-| `metamorphic_stone:1` | eclogite | `stained_hardened_clay:13` (green) |
-| `metamorphic_stone:4` | blue schist | `stained_hardened_clay:9` (cyan) |
-| `metamorphic_stone:5` | green schist | `stained_hardened_clay:13` (green) |
-| `metamorphic_stone:6` | soapstone | `stained_hardened_clay:8` (light gray) |
-| `sedimentary_stone:0` | limestone | `stone:3` (diorite) |
-| `sedimentary_stone:1` | chalk | `stained_hardened_clay:0` (white) |
-| `sedimentary_stone:2` | shale | `stained_hardened_clay:7` (gray) (brown `:12` in mesa) |
-| `sedimentary_stone:3` | siltstone | `hardened_clay` |
-| `sedimentary_stone:5` | dolomite | `stained_hardened_clay:8` (light gray) |
-| `sedimentary_stone:6` | greywacke | `stained_hardened_clay:7` (gray) |
+| `igneous_stone:0` | red granite | `stone` |
+| `igneous_stone:2` | rhyolite | `stone` |
+| `igneous_stone:3` | andesite | `stone` |
+| `igneous_stone:4` | gabbro | `stone` |
+| `igneous_stone:5` | basalt | `stone` |
+| `igneous_stone:6` | komatiite | `stone` |
+| `igneous_stone:7` | dacite | `stone` |
+| `metamorphic_stone:0` | gneiss | `stone` |
+| `metamorphic_stone:1` | eclogite | `stone` |
+| `metamorphic_stone:4` | blue schist | `stone` |
+| `metamorphic_stone:5` | green schist | `stone` |
+| `metamorphic_stone:6` | soapstone | `stone` |
+| `sedimentary_stone:0` | limestone | `stone` |
+| `sedimentary_stone:1` | chalk | `stone` |
+| `sedimentary_stone:2` | shale | `stone` |
+| `sedimentary_stone:3` | siltstone | `stone` |
+| `sedimentary_stone:5` | dolomite | `stone` |
+| `sedimentary_stone:6` | greywacke | `stone` |
 | `sedimentary_sandstone:*` | — | `sandstone` / `red_sandstone` |
 | `sedimentary_sand:*` | — | `sandstone` (never a gravity block) |
 | `biomesoplenty:hard_ice` | — | `packed_ice` |
@@ -110,8 +110,14 @@ has to be added to the matching list there as well as to the assets folder.
 - `imports/common_values.cave` and `imports/sand_cave_values.cave` define
   vanilla-only `NATURAL_STONE` lists. They include every block the stone
   layers place, so caves and wall decorators always cut through the strata.
-- Stone layers replace only `stone`, `dirt` and `grass` (the mod's code
-  default, exactly as in the modded config).
+- Stone layers replace only plain `stone` (the mod's code default; no preset
+  overrides `matchers`). Every UB rock is now plain stone, so those layers
+  place stone on stone and change nothing. They are kept so the strata can be
+  re-themed later by editing each layer's `state`.
+- Because the rock layers no longer use up the stone beneath them, the layers
+  that still place something else (sandstone in desert, red sandstone in mesa,
+  packed ice in frozen biomes) have an explicit `floor`. Without it they would
+  replace all stone down to bedrock.
 - `04_bands_dirt_on_arid_tuff.cave` arrived using `warp` / `warpAmplitude` /
   `warpFrequency` on its cavern generator. Those keys do not exist in this
   mod's noise settings and would have been read by nothing, so they were

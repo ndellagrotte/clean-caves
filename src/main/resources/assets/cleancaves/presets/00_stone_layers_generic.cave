@@ -7,10 +7,11 @@
 # from bottom to top.                                         #
 # ----------------------------------------------------------- #
 # This file is for base rocks
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla
-# equivalents (red granite->granite, gneiss->andesite, limestone->diorite,
-# dolomite->light gray terracotta, green schist->green terracotta,
-# blue schist->cyan terracotta). Modded biomes removed.
+# Vanilla refactor: every UndergroundBiomes rock (red granite, gneiss, limestone,
+# dolomite, green schist, blue schist) was replaced with plain stone. Modded
+# biomes removed.
+# All layers now place stone on stone, so this preset currently changes nothing;
+# the layers are kept so they can be re-themed.
 {
   biomes: {
     names: [
@@ -39,7 +40,7 @@
   layers: [
     {
       #red granite
-      state: minecraft:stone:1
+      state: minecraft:stone
       height: [ 0, 16 ]
       ceiling: {
         frequency: 0.015
@@ -48,7 +49,7 @@
     }
     {
       #gneiss
-      state: minecraft:stone:5
+      state: minecraft:stone
       height: [ 0, 52 ]
       ceiling: {
         frequency: 0.015
@@ -56,7 +57,7 @@
     }
     {
       #limestone
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 100 ]
       ceiling: {
         frequency: 0.015
@@ -65,7 +66,7 @@
     }
     {
       #dolomite
-      state: minecraft:stained_hardened_clay:8
+      state: minecraft:stone
       height: [ 0, 128 ]
       ceiling: {
         frequency: 0.015
@@ -74,7 +75,7 @@
     }
     {
       #green schist
-      state: minecraft:stained_hardened_clay:13
+      state: minecraft:stone
       height: [ 0, 190 ]
       ceiling: {
         frequency: 0.3
@@ -83,7 +84,7 @@
     }
     {
       #blue schist
-      state: minecraft:stained_hardened_clay:9
+      state: minecraft:stone
       height: [ 0, 255 ]
       ceiling: {
         frequency: 0.2

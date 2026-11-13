@@ -1,5 +1,7 @@
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla equivalents
-# (dacite->diorite, soapstone->light gray terracotta, chalk->white terracotta).
+# Vanilla refactor: every UndergroundBiomes rock (dacite, soapstone, chalk) was
+# replaced with plain stone.
+# All layers now place stone on stone, so this preset currently changes nothing;
+# the layers are kept so they can be re-themed.
 {
   biomes: {
     names: [
@@ -9,7 +11,7 @@
   layers: [
     {
       #dacite
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 18 ]
       ceiling: {
         frequency: 0.015
@@ -18,7 +20,7 @@
     }
     {
       #soapstone
-      state: minecraft:stained_hardened_clay:8
+      state: minecraft:stone
       height: [ 0, 48 ]
       ceiling: {
         frequency: 0.015
@@ -26,7 +28,7 @@
     }
     {
       #chalk
-      state: minecraft:stained_hardened_clay:0
+      state: minecraft:stone
       height: [ 0, 164 ]
       ceiling: {
         frequency: 0.015
@@ -35,7 +37,7 @@
     }
     {
       #dacite
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 255 ]
       ceiling: {
         frequency: 0.015

@@ -1,6 +1,7 @@
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla equivalents
-# (red granite->granite, andesite->andesite, BOP hard ice->packed ice,
-#  limestone->diorite). Modded biomes removed.
+# Vanilla refactor: UndergroundBiomes rocks (red granite, andesite, limestone)
+# were replaced with plain stone; BOP hard ice->packed ice. Layers only replace
+# plain stone, so the ice layer has a floor to keep it from also replacing the
+# stone below it. Modded biomes removed.
 {
   biomes: {
     names: [
@@ -15,7 +16,7 @@
   layers: [
     {
       #red granite
-      state: minecraft:stone:1
+      state: minecraft:stone
       height: [ 0, 12 ]
       ceiling: {
         frequency: 0.015
@@ -24,7 +25,7 @@
     }
     {
       #andesite
-      state: minecraft:stone:5
+      state: minecraft:stone
       height: [ 0, 48 ]
       ceiling: {
         frequency: 0.015
@@ -34,7 +35,11 @@
     {
       #hard ice
       state: minecraft:packed_ice
-      height: [ 0, 64 ]
+      height: [ 48, 64 ]
+      floor: {
+        frequency: 0.015
+        range: [ 0, 3 ]
+      }
       ceiling: {
         frequency: 0.015
         range: [ -4, 4 ]
@@ -42,7 +47,7 @@
     }
     {
       #limestone
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 255 ]
       ceiling: {
         frequency: 0.015

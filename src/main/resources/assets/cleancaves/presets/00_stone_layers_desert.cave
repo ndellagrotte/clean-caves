@@ -1,6 +1,7 @@
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla equivalents
-# (andesite->andesite, greywacke->gray terracotta, greywacke sandstone->smooth
-#  sandstone, greywacke sand->sandstone). Modded biomes removed.
+# Vanilla refactor: UndergroundBiomes rocks (andesite, greywacke) were replaced
+# with plain stone; greywacke sandstone->smooth sandstone, greywacke sand->sandstone.
+# Layers only replace plain stone, so each sandstone layer has a floor to keep it
+# from also replacing the stone bands below it. Modded biomes removed.
 {
   biomes: {
     names: [
@@ -22,7 +23,7 @@
   layers: [
     {
       #andesite bedrock
-      state: minecraft:stone:5
+      state: minecraft:stone
       height: [ 0, 26 ]
       ceiling: {
         frequency: 0.015
@@ -32,7 +33,11 @@
     {
       #underground sandstone
       state: minecraft:sandstone
-      height: [ 0, 90 ]
+      height: [ 26, 90 ]
+      floor: {
+        frequency: 0.015
+        range: [ 0, 3 ]
+      }
       ceiling: {
         frequency: 0.015
         range: [ -4, 4 ]
@@ -40,7 +45,7 @@
     }
     {
       #greywacke
-      state: minecraft:stained_hardened_clay:7
+      state: minecraft:stone
       height: [ 0, 110 ]
       ceiling: {
         frequency: 0.015
@@ -50,7 +55,11 @@
     {
       #greywacke sandstone
       state: minecraft:sandstone:2
-      height: [ 0, 150 ]
+      height: [ 110, 150 ]
+      floor: {
+        frequency: 0.015
+        range: [ 0, 3 ]
+      }
       ceiling: {
         frequency: 0.015
         range: [ -1, 1 ]
@@ -59,7 +68,11 @@
     {
       #greywacke sand
       state: minecraft:sandstone
-      height: [ 0, 255 ]
+      height: [ 150, 255 ]
+      floor: {
+        frequency: 0.015
+        range: [ -1, 1 ]
+      }
       ceiling: {
         frequency: 0.015
         range: [ -1, 1 ]

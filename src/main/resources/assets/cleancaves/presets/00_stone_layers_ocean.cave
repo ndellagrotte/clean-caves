@@ -1,5 +1,7 @@
-# Vanilla refactor: UndergroundBiomes blocks were replaced with vanilla equivalents
-# (red granite->granite, gabbro->andesite, limestone->diorite). Modded biomes removed.
+# Vanilla refactor: every UndergroundBiomes rock (red granite, gabbro, limestone)
+# was replaced with plain stone. Modded biomes removed.
+# All layers now place stone on stone, so this preset currently changes nothing;
+# the layers are kept so they can be re-themed.
 {
   biomes: {
     names: [
@@ -10,7 +12,7 @@
   layers: [
     {
       #red granite
-      state: minecraft:stone:1
+      state: minecraft:stone
       height: [ 0, 26 ]
       ceiling: {
         frequency: 0.015
@@ -19,7 +21,7 @@
     }
     {
       #gabbro
-      state: minecraft:stone:5
+      state: minecraft:stone
       height: [ 0, 58 ]
       ceiling: {
         frequency: 0.015
@@ -28,7 +30,7 @@
     }
     {
       #limestone
-      state: minecraft:stone:3
+      state: minecraft:stone
       height: [ 0, 255 ]
       ceiling: {
         frequency: 0.015
