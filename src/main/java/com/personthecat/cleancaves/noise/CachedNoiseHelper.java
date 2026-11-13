@@ -19,10 +19,13 @@ public final class CachedNoiseHelper {
     /** Keyed by the generator itself, so that only generators producing the same noise share. */
     private static final Map<FastNoise, Cache> DATA = new ConcurrentHashMap<>();
 
-    /** The lowest block coordinates of the area the caches currently describe. */
-    private static int originX;
-    private static int originZ;
-    private static boolean active;
+    /**
+     * The lowest block coordinates of the area the caches currently describe. Volatile because
+     * helper threads read them while the server thread starts and ends an area.
+     */
+    private static volatile int originX;
+    private static volatile int originZ;
+    private static volatile boolean active;
 
     private CachedNoiseHelper() { }
 
@@ -61,10 +64,11 @@ public final class CachedNoiseHelper {
     /**
      * Callers must be careful to ensure boundaries are not exceeded.
      *
-     * It is also important to understand that this is <em>not a thread-safe implementation
-     * </em>. Additional work would be needed to ensure that concurrent write operations do
-     * not corrupt the data. This feature is left out here because concurrent writes never
-     * have the chance to occur.
+     * Several threads may read and write one cache while parallel generation is filling a chunk:
+     * every thread computes the same value for a coordinate and writes it to the same slot, and a
+     * read that misses a write simply computes the value again. The array is never resized or
+     * cleared while generation is running--{@link #begin} resets it before any work starts and
+     * {@link #end} stops caching afterwards--so there is nothing for the writes to corrupt.
      */
     public static class Cache {
 

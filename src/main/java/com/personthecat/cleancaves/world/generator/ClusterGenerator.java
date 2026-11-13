@@ -2,8 +2,11 @@ package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.data.ClusterSettings;
 import com.personthecat.cleancaves.model.Conditions;
+import com.personthecat.cleancaves.model.Range;
+import com.personthecat.cleancaves.util.BlockMask;
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import com.personthecat.cleancaves.world.RandomChunkSelector;
+import com.personthecat.cleancaves.world.parallel.GenerationPool;
 import org.apache.commons.lang3.tuple.Pair;
 
 import net.minecraft.block.state.IBlockState;
@@ -13,12 +16,19 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkPrimer;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class ClusterGenerator extends ListGenerator<ClusterSettings> {
+
+    /** The number of columns in a chunk. */
+    private static final int COLUMNS = 16 * 16;
+
+    /** A rough measure of how much work one column is, for the workload detector. */
+    private static final long UNITS_PER_COLUMN = 96L;
 
     /**
      * Clusters grouped by the conditions they spawn under. {@link Conditions} compares by identity,
@@ -27,6 +37,10 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
      */
     private final Map<Conditions, List<ClusterInfo>> clusterMap = new LinkedHashMap<>();
     private final RandomChunkSelector selector;
+
+    /** Prepared columns, one entry per group of clusters, reused between chunks. */
+    private final Map<Conditions, ConditionScope> scopes = new IdentityHashMap<>();
+    private final List<ConditionScope> ordered = new ArrayList<>();
 
     public ClusterGenerator(List<ClusterSettings> cfg, World world) {
         super(cfg, c -> c.conditions(), world);
@@ -71,7 +85,42 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
         ctx.world.rand.setSeed(ctx.world.getSeed());
         this.clusterMap.clear();
         this.locateFinalClusters(ctx.world, ctx.world.rand, ctx.chunkX, ctx.chunkZ);
+        this.gatherScopes();
+        if (this.ordered.isEmpty()) {
+            return;
+        }
+        GenerationPool.forEach(GenerationPool.CLUSTER_COLUMNS, COLUMNS, UNITS_PER_COLUMN * this.ordered.size(),
+                i -> this.prepareColumn(ctx, i));
         this.generateClusters(ctx.primer, ctx.localRand, ctx.chunkX, ctx.chunkZ);
+    }
+
+    /** Pairs each group of placed clusters with its reusable column buffers. */
+    private void gatherScopes() {
+        this.ordered.clear();
+        for (Map.Entry<Conditions, List<ClusterInfo>> entry : this.clusterMap.entrySet()) {
+            final ConditionScope scope = this.scopes.computeIfAbsent(entry.getKey(), ConditionScope::new);
+            scope.clusters = entry.getValue();
+            scope.reset();
+            this.ordered.add(scope);
+        }
+    }
+
+    /** Computes the noise and height limits of one column for every group of clusters. */
+    private void prepareColumn(PrimerContext ctx, int i) {
+        final int x = i >> 4;
+        final int z = i & 15;
+        final int actualX = x + (ctx.chunkX * 16);
+        final int actualZ = z + (ctx.chunkZ * 16);
+        for (ConditionScope scope : this.ordered) {
+            final Range column = scope.conditions.getColumn(actualX, actualZ);
+            scope.columns[i] = column;
+            final BlockMask mask = scope.masks[i];
+            for (int y : column) {
+                if (scope.conditions.noise.GetBoolean(actualX, y, actualZ)) {
+                    mask.set(y);
+                }
+            }
+        }
     }
 
     private void locateFinalClusters(World world, Random rand, int chunkX, int chunkZ) {
@@ -126,15 +175,42 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
     }
 
     private void spawnColumn(ChunkPrimer primer, Random rand, int x, int z, int actualX, int actualZ) {
-        for (Map.Entry<Conditions, List<ClusterInfo>> entry : clusterMap.entrySet()) {
-            final Conditions conditions = entry.getKey();
-
-            for (int y : conditions.getColumn(actualX, actualZ)) {
-                if (conditions.noise.GetBoolean(actualX, y, actualZ)) {
-                    spawnCluster(entry.getValue(), primer, rand, x, y, z, actualX, actualZ);
+        final int i = x << 4 | z;
+        for (ConditionScope scope : this.ordered) {
+            final BlockMask mask = scope.masks[i];
+            if (mask.isEmpty()) {
+                continue;
+            }
+            for (int y : scope.columns[i]) {
+                if (mask.get(y)) {
+                    spawnCluster(scope.clusters, primer, rand, x, y, z, actualX, actualZ);
                 }
             }
         }
+    }
+
+    /** One group of clusters and the columns already computed for it. */
+    private static final class ConditionScope {
+
+        final Conditions conditions;
+        final Range[] columns = new Range[COLUMNS];
+        final BlockMask[] masks = new BlockMask[COLUMNS];
+
+        List<ClusterInfo> clusters = List.of();
+
+        ConditionScope(Conditions conditions) {
+            this.conditions = conditions;
+            for (int i = 0; i < COLUMNS; i++) {
+                this.masks[i] = new BlockMask();
+            }
+        }
+
+        void reset() {
+            for (BlockMask mask : this.masks) {
+                mask.clear();
+            }
+        }
+
     }
 
     /** Generated info related to how the current cluster will be spawned in the world. */

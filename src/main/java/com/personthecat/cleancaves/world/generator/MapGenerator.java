@@ -8,6 +8,7 @@ import com.personthecat.cleancaves.model.PrimerData;
 import com.personthecat.cleancaves.util.PositionFlags;
 import com.personthecat.cleancaves.util.XoRoShiRo;
 import com.personthecat.cleancaves.world.BiomeSearch;
+import com.personthecat.cleancaves.world.parallel.GenerationPool;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
@@ -31,6 +32,9 @@ public abstract class MapGenerator extends WorldCarver {
     private final SphereData sphere = new SphereData();
     protected final Random rand = new XoRoShiRo(0L);
     private final boolean testWater;
+
+    /** Per-band position lists used when a sphere is filled on several threads. Allocated lazily. */
+    private SphereData[] bands;
 
     public MapGenerator(ConditionSettings conditions, DecoratorSettings decorators, World world, boolean testWater) {
         super(conditions, decorators, world);
@@ -123,12 +127,10 @@ public abstract class MapGenerator extends WorldCarver {
         this.sphere.reset();
         this.sphere.grow(maX - miX, maY - miY, maZ - miZ);
 
-        if (roXZ - radXZ != 0 && rand.nextInt(decorators.shell.cfg.sphereResolution()) == 0) {
-            this.fillDouble(this.sphere, x, y, z, data.absX(), data.absZ(), radXZ, radY, roXZ, roY, miX, maX, miY, maY,
-                    miZ, maZ);
-        } else {
-            this.fillSphere(this.sphere, x, y, z, data.absX(), data.absZ(), radXZ, radY, miX, maX, miY, maY, miZ, maZ);
-        }
+        // The choice of shape is drawn first, so splitting the fill cannot change the random stream.
+        final boolean doubleFill = roXZ - radXZ != 0 && rand.nextInt(decorators.shell.cfg.sphereResolution()) == 0;
+        final SphereShape shape = new SphereShape(x, y, z, data.absX(), data.absZ(), radXZ, radY, roXZ, roY);
+        this.fillSphereInBands(doubleFill, shape, miX, maX, miY, maY, miZ, maZ);
 
         // If we need to test this section for water -> is there water?
         if (!(this.shouldTestForWater(miY, maY) && this.testForWater(data.p(), this.sphere.inner))) {
@@ -136,6 +138,71 @@ public abstract class MapGenerator extends WorldCarver {
             this.replaceSphere(data, rand, this.sphere.inner);
             this.decorateAll(this.sphere.inner, rand, world, data.p(), data.chunkX(), data.chunkZ());
         }
+    }
+
+    /**
+     * Fills the sphere's position lists, optionally splitting the x axis across helper threads.
+     * Each band writes its own list and the lists are merged in ascending x order, which is the
+     * order a single-threaded fill adds them in, so decoration sees an identical position list.
+     */
+    private void fillSphereInBands(boolean doubleFill, SphereShape shape, int miX, int maX, int miY, int maY, int miZ,
+            int maZ) {
+        final int span = maX - miX;
+        final long volume = (long) span * (maY - miY) * (maZ - miZ);
+        final int bandCount = GenerationPool.bandCount(GenerationPool.SPHERE_FILL, volume, span);
+        if (bandCount <= 1) {
+            GenerationPool.forEach(GenerationPool.SPHERE_FILL, 1, volume,
+                    i -> this.fillSphereRange(doubleFill, this.sphere, shape, miX, maX, miY, maY, miZ, maZ));
+            return;
+        }
+        final SphereData[] parts = this.bandBuffers();
+        for (int i = 0; i < bandCount; i++) {
+            parts[i].reset();
+        }
+        GenerationPool.forEach(GenerationPool.SPHERE_FILL, bandCount, volume / bandCount, i -> {
+            final int from = miX + (int) ((long) span * i / bandCount);
+            final int to = miX + (int) ((long) span * (i + 1) / bandCount);
+            final SphereData part = parts[i];
+            part.grow(to - from, maY - miY, maZ - miZ);
+            this.fillSphereRange(doubleFill, part, shape, from, to, miY, maY, miZ, maZ);
+        });
+        for (int i = 0; i < bandCount; i++) {
+            this.sphere.inner.addAll(parts[i].inner);
+            this.sphere.shell.addAll(parts[i].shell);
+        }
+    }
+
+    /** The single-threaded fill of an x range, shared by the inline and banded paths. */
+    private void fillSphereRange(boolean doubleFill, SphereData target, SphereShape shape, int miX, int maX, int miY,
+            int maY, int miZ, int maZ) {
+        if (doubleFill) {
+            this.fillDouble(target, shape.x(), shape.y(), shape.z(), shape.absX(), shape.absZ(), shape.radXZ(),
+                    shape.radY(), shape.roXZ(), shape.roY(), miX, maX, miY, maY, miZ, maZ);
+        } else {
+            this.fillSphere(target, shape.x(), shape.y(), shape.z(), shape.absX(), shape.absZ(), shape.radXZ(),
+                    shape.radY(), miX, maX, miY, maY, miZ, maZ);
+        }
+    }
+
+    /** The geometry of one sphere segment: where it sits and how large it is. */
+    private record SphereShape(double x,
+            double y,
+            double z,
+            int absX,
+            int absZ,
+            double radXZ,
+            double radY,
+            double roXZ,
+            double roY) { }
+
+    private SphereData[] bandBuffers() {
+        if (this.bands == null) {
+            this.bands = new SphereData[GenerationPool.MAX_BANDS];
+            for (int i = 0; i < this.bands.length; i++) {
+                this.bands[i] = new SphereData();
+            }
+        }
+        return this.bands;
     }
 
     /** Makes sure the resulting value stays within chunk bounds. */

@@ -6,8 +6,10 @@ import com.personthecat.cleancaves.data.NoiseMapSettings;
 import com.personthecat.cleancaves.data.NoiseSettings;
 import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.noise.DummyGenerator;
+import com.personthecat.cleancaves.util.BlockMask;
 import com.personthecat.cleancaves.util.PositionFlags;
 import com.personthecat.cleancaves.world.BiomeSearch;
+import com.personthecat.cleancaves.world.parallel.GenerationPool;
 import fastnoise.FastNoise;
 
 import net.minecraft.world.World;
@@ -20,6 +22,12 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class CavernGenerator extends WorldCarver implements TunnelSocket {
+
+    /** The number of columns in a chunk. */
+    private static final int COLUMNS = 16 * 16;
+
+    /** A rough measure of how much work one column is, for the workload detector. */
+    private static final long UNITS_PER_COLUMN = 224L;
 
     protected final CavernSettings cfg;
 
@@ -35,6 +43,16 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
     private final int diffY;
     private final int curveOffset;
 
+    /**
+     * Per-column decisions, reused between chunks. Helper threads fill one column each; the main
+     * thread then walks the same columns in the same order and only supplies the random choices.
+     */
+    private final Range[] columns = new Range[COLUMNS];
+    private final BlockMask[] placeMasks = new BlockMask[COLUMNS];
+    private final BlockMask[] shellMasks = new BlockMask[COLUMNS];
+    private final BlockMask[][] innerMasks;
+    private final BlockMask[][] outerMasks;
+
     public CavernGenerator(CavernSettings cfg, World world) {
         super(cfg.conditions(), cfg.decorators(), world);
         this.generators = createGenerators(cfg.generators(), world);
@@ -49,6 +67,13 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
         this.caverns = new PositionFlags(16 * 16 * this.maxY - minY);
         this.curveOffset = (this.diffY + 1) / -2;
 
+        this.innerMasks = createMasks(this.generators.size());
+        this.outerMasks = createMasks(this.generators.size());
+        for (int i = 0; i < COLUMNS; i++) {
+            this.placeMasks[i] = new BlockMask();
+            this.shellMasks[i] = new BlockMask();
+        }
+
         final int r = BiomeSearch.size();
         this.invalidChunks = new ArrayList<>(this.wallInterpolated ? (r * 2 + 1) * 2 - 1 : r);
         if (cfg.walls().isPresent()) {
@@ -61,6 +86,17 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
 
     private static List<FastNoise> createGenerators(List<NoiseSettings> settings, World world) {
         return settings.stream().map(s -> s.getGenerator(world)).collect(Collectors.toList());
+    }
+
+    /** One mask per generator and column, only allocated when the caverns have generators. */
+    private static BlockMask[][] createMasks(int generators) {
+        final BlockMask[][] masks = new BlockMask[generators][COLUMNS];
+        for (int g = 0; g < generators; g++) {
+            for (int i = 0; i < COLUMNS; i++) {
+                masks[g][i] = new BlockMask();
+            }
+        }
+        return masks;
     }
 
     private static void interpolate(boolean[][] f) {
@@ -154,13 +190,29 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
 
     @Override
     protected void generateChecked(PrimerContext ctx) {
-        this.generateCaverns(ctx.heightmap, ctx.localRand, ctx.world, ctx.primer, ctx.chunkX, ctx.chunkZ);
+        this.clearMasks();
+        GenerationPool.forEach(GenerationPool.CAVERN_COLUMNS, COLUMNS, UNITS_PER_COLUMN,
+                i -> this.prepareColumn(ctx, i));
+        this.generateCaverns(ctx.localRand, ctx.world, ctx.primer, ctx.chunkX, ctx.chunkZ);
     }
 
     @Override
     protected void generateShell(Random rand, ChunkPrimer primer, int x, int y, int z, int cy, int chunkX, int chunkZ) {
         if (this.hasShell()) {
             super.generateShell(rand, primer, x, y, z, cy, chunkX, chunkZ);
+        }
+    }
+
+    private void clearMasks() {
+        for (int i = 0; i < COLUMNS; i++) {
+            this.placeMasks[i].clear();
+            this.shellMasks[i].clear();
+        }
+        for (int g = 0; g < this.generators.size(); g++) {
+            for (int i = 0; i < COLUMNS; i++) {
+                this.innerMasks[g][i].clear();
+                this.outerMasks[g][i].clear();
+            }
         }
     }
 
@@ -237,50 +289,89 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
     }
 
     /** Generates giant air pockets in this chunk using a series of 3D noise generators. */
-    private void generateCaverns(int[][] heightmap, Random rand, World world, ChunkPrimer primer, int chunkX,
-            int chunkZ) {
+    private void generateCaverns(Random rand, World world, ChunkPrimer primer, int chunkX, int chunkZ) {
         for (int x = 0; x < 16; x++) {
             final int actualX = x + (chunkX * 16);
             for (int z = 0; z < 16; z++) {
                 final int actualZ = z + (chunkZ * 16);
-                this.generateColumn(heightmap, rand, primer, x, z, chunkX, chunkZ, actualX, actualZ);
+                this.generateColumn(rand, primer, x, z, chunkX, chunkZ);
             }
         }
         // Caverns must be completely generated before decorating.
         this.decorateAll(this.caverns, rand, world, primer, chunkX, chunkZ);
     }
 
-    private void generateColumn(int[][] heightmap, Random rand, ChunkPrimer primer, int x, int z, int chunkX,
-            int chunkZ, int actualX, int actualZ) {
+    /** Computes every pure decision for one column: borders, height, and all of the noise. */
+    private void prepareColumn(PrimerContext ctx, int i) {
+        final int x = i >> 4;
+        final int z = i & 15;
+        final int actualX = x + (ctx.chunkX * 16);
+        final int actualZ = z + (ctx.chunkZ * 16);
         final BorderData border = this.getNearestBorder(actualX, actualZ);
-        final double distance = border.distance;
-        final int offset = border.offset;
-        final Range height = this.conditions.getColumn(heightmap, actualX, actualZ);
+        final Range height = this.conditions.getColumn(ctx.heightmap, actualX, actualZ);
+        this.columns[i] = height;
         // Adjust the height to accommodate the shell.
         final int d = (int) this.decorators.shell.radius;
         final int min = Math.max(1, height.min() - d);
         final int max = Math.min(255, height.max() + d);
         final int offY = (int) this.heightOffset.GetAdjustedNoise(actualX, actualZ);
+        final BlockMask place = this.placeMasks[i];
+        final BlockMask shell = this.shellMasks[i];
         for (int y = min; y < max; y++) {
-            if (this.conditions.noise.GetBoolean(actualX, y + offY, actualZ)) {
-                final double relY = this.curveOffset + this.maxY - y;
-                final double curve = distance - ((relY * relY) / this.diffY * this.wallCurveRatio);
-
-                final double wall = this.wallNoise[(y + offset) & 255];
-                if (curve > wall) {
-                    this.place(rand, primer, height, x, y, z, offY, chunkX, chunkZ, actualX, actualZ);
-                } else if (curve > wall - d) {
-                    this.generateShell(rand, primer, x, y, z, y, chunkX, chunkZ);
-                }
+            if (!this.conditions.noise.GetBoolean(actualX, y + offY, actualZ)) {
+                continue;
+            }
+            final double relY = this.curveOffset + this.maxY - y;
+            final double curve = border.distance - ((relY * relY) / this.diffY * this.wallCurveRatio);
+            final double wall = this.wallNoise[(y + border.offset) & 255];
+            if (curve > wall) {
+                place.set(y);
+                this.classifyGenerators(i, actualX, y + offY, actualZ, y);
+            } else if (curve > wall - d) {
+                shell.set(y);
             }
         }
     }
 
-    private void place(Random rand, ChunkPrimer primer, Range height, int x, int y, int z, int offY, int chunkX,
-            int chunkZ, int actualX, int actualZ) {
-        for (FastNoise noise : this.generators) {
-            final float value = noise.GetNoise(actualX, y + offY, actualZ);
+    /** Records which generator would carve or shell a block, exactly as the original loop did. */
+    private void classifyGenerators(int column, int actualX, int y, int actualZ, int blockY) {
+        for (int g = 0; g < this.generators.size(); g++) {
+            final FastNoise noise = this.generators.get(g);
+            final float value = noise.GetNoise(actualX, y, actualZ);
             if (noise.IsInThreshold(value)) {
+                this.innerMasks[g][column].set(blockY);
+                return;
+            } else if (noise.IsOuter(value, this.decorators.shell.noiseThreshold)) {
+                this.outerMasks[g][column].set(blockY);
+            }
+        }
+    }
+
+    /** Applies one prepared column. Only random choices and block writes happen here. */
+    private void generateColumn(Random rand, ChunkPrimer primer, int x, int z, int chunkX, int chunkZ) {
+        final int i = x << 4 | z;
+        final BlockMask place = this.placeMasks[i];
+        final BlockMask shell = this.shellMasks[i];
+        if (place.isEmpty() && shell.isEmpty()) {
+            return;
+        }
+        final Range height = this.columns[i];
+        final int d = (int) this.decorators.shell.radius;
+        final int min = Math.max(1, height.min() - d);
+        final int max = Math.min(255, height.max() + d);
+        for (int y = min; y < max; y++) {
+            if (place.get(y)) {
+                this.place(rand, primer, height, x, y, z, chunkX, chunkZ, i);
+            } else if (shell.get(y)) {
+                this.generateShell(rand, primer, x, y, z, y, chunkX, chunkZ);
+            }
+        }
+    }
+
+    private void place(Random rand, ChunkPrimer primer, Range height, int x, int y, int z, int chunkX, int chunkZ,
+            int column) {
+        for (int g = 0; g < this.generators.size(); g++) {
+            if (this.innerMasks[g][column].get(y)) {
                 if (height.contains(y)) {
                     this.replaceBlock(rand, primer, x, y, z, chunkX, chunkZ);
                     this.caverns.add(x, y, z);
@@ -288,7 +379,7 @@ public class CavernGenerator extends WorldCarver implements TunnelSocket {
                     this.generateShell(rand, primer, x, y, z, y, chunkX, chunkZ);
                 }
                 return;
-            } else if (noise.IsOuter(value, this.decorators.shell.noiseThreshold)) {
+            } else if (this.outerMasks[g][column].get(y)) {
                 this.generateShell(rand, primer, x, y, z, y, chunkX, chunkZ);
             }
         }

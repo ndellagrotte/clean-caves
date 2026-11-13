@@ -62,6 +62,34 @@ class PositionFlagsTest {
     }
 
     @Test
+    @DisplayName("addAll merges bands in the order they are appended, growing when needed")
+    void addAllKeepsOrder() {
+        final PositionFlags flags = new PositionFlags(1);
+        for (int band = 0; band < 3; band++) {
+            final PositionFlags part = new PositionFlags(4);
+            for (int z = 0; z < 4; z++) {
+                part.add(band, z, z);
+            }
+            flags.addAll(part);
+        }
+        final List<int[]> read = drain(flags);
+        assertThat(read).hasSize(12);
+        for (int i = 0; i < read.size(); i++) {
+            assertThat(read.get(i)[0]).as("x at " + i).isEqualTo(i / 4);
+            assertThat(read.get(i)[1]).as("y at " + i).isEqualTo(i % 4);
+        }
+    }
+
+    @Test
+    @DisplayName("addAll of an empty list leaves the target untouched")
+    void addAllEmpty() {
+        final PositionFlags flags = new PositionFlags(2);
+        flags.add(1, 2, 3);
+        flags.addAll(new PositionFlags(2));
+        assertThat(drain(flags)).hasSize(1);
+    }
+
+    @Test
     @DisplayName("reset makes the buffer reusable without reallocating")
     void resetClears() {
         final PositionFlags flags = new PositionFlags(4);

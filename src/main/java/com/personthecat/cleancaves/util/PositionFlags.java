@@ -100,9 +100,32 @@ public class PositionFlags {
         return false;
     }
 
+    /**
+     * Copies every position stored in {@code other} onto the end of this list, in the order the
+     * other list holds them. Used to merge regions that were filled on different threads back into
+     * one list without changing the order the positions would have been added in.
+     */
+    public void addAll(PositionFlags other) {
+        final int length = other.index;
+        if (length == 0) {
+            return;
+        }
+        this.ensureCapacity(this.index + length);
+        System.arraycopy(other.positions, 0, this.positions, this.index, length);
+        this.index += length;
+    }
+
     /** Resets the cursor to 0. No need to overwrite values. */
     public void reset() {
         this.index = 0;
+    }
+
+    private void ensureCapacity(int required) {
+        if (required > this.positions.length) {
+            final int[] data = this.positions;
+            this.positions = new int[required + BUFFER_SIZE];
+            System.arraycopy(data, 0, this.positions, 0, this.index);
+        }
     }
 
 }

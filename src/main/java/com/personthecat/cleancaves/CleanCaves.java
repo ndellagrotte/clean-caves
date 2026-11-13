@@ -11,6 +11,7 @@ import com.personthecat.cleancaves.world.event.DisableVanillaStoneGen;
 import com.personthecat.cleancaves.world.event.ReplaceVanillaCaveGen;
 import com.personthecat.cleancaves.world.feature.FeatureCaveHook;
 import com.personthecat.cleancaves.world.feature.StructureSpawner;
+import com.personthecat.cleancaves.world.parallel.GenerationPool;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -73,6 +74,7 @@ public class CleanCaves {
     public void onServerStoppingEvent(FMLServerStoppingEvent event) {
         LOGGER.info("Unloading generators.");
         this.generators.clear();
+        GenerationPool.shutdown();
         CachedNoiseHelper.removeAll();
     }
 

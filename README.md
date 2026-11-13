@@ -36,6 +36,38 @@ field. Both are rewritten on each launch, so edit a copy.
 `copy`, `move`, `delete`, `rename`, `expand`, `compress`, `import`, `eval`, and more. Run
 `/cave help` in game for the full list.
 
+## Performance
+
+Cave generation is parallelized across helper threads by default. The expensive, pure parts are
+computed ahead of the writing pass and consumed in the same order regardless of how many threads
+produced them, so a given seed generates exactly the same caves as running everything on the server
+thread would:
+
+- **Stone layers, caverns and clusters** are prepared one chunk column at a time. Each column
+  evaluates its own floor, ceiling, region and 3D cave noise, and records which y coordinates will
+  be replaced. The server thread then applies the columns in their original order and makes every
+  random choice.
+- **Tunnel, ravine and room segments** have their block position lists filled in parallel x bands.
+  The bands are merged in ascending x order, which is the order a single-threaded fill produces, so
+  decoration walks an identical position list.
+
+Whether a particular workload is split is decided from measured timings. Small work (or a machine
+where coordination costs more than it saves) stays on the server thread; the server thread always
+takes a share of whatever is split, so a split never waits on a helper that has not started.
+
+Two settings in `config/cleancaves.cfg` control it:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `parallelGeneration` | `true` | Set to `false` to keep all generation on the server thread. |
+| `maxGeneratorThreads` | `0` | Helper threads. `0` picks CPU threads minus a reserve for the server, the client renderer and Pulsar, capped at 7. A positive value overrides that, up to 7. |
+
+The design is modelled on [CaveSpeedThing](https://www.curseforge.com/minecraft/mc-mods/cavespeedthing)
+by ChristKind, which parallelizes Better Caves carving, and on
+[NoiseThreader](https://www.curseforge.com/minecraft/mc-mods/noisethreader) by fonnymunkey, which
+inspired it. See [docs/parallel-generation.md](docs/parallel-generation.md) for how the work is
+split and why it cannot change the result.
+
 ## Differences from Cave Generator
 
 A preset written for Cave Generator 1.x loads here, with two caveats. Presets still using

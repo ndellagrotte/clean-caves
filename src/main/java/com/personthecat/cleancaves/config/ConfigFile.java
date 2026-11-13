@@ -76,6 +76,22 @@ public final class ConfigFile {
                     "variables are getting expanded every time you reload your", "presets."
             }) public static boolean autoGenerate = true;
 
+    @Comment({
+                    "Whether the pure parts of cave generation--the noise that",
+                    "decides where caves go--may be computed on helper threads.",
+                    "Caves are always written to the chunk on the server thread,",
+                    "in the same order, so the generated terrain is unchanged.",
+                    "Disable this to keep everything on the server thread."
+            }) public static boolean parallelGeneration = true;
+
+    @Comment({
+                    "Helper threads used for parallel cave generation.",
+                    "0 = automatic: CPU threads minus a reserve for the server,",
+                    "the client renderer and Pulsar (capped at 7, because the",
+                    "server thread always works too). A positive value overrides",
+                    "the automatic choice, up to the same maximum of 7."
+            }) @RequiresMcRestart public static int maxGeneratorThreads = 0;
+
     private ConfigFile() { }
 
     @SubscribeEvent
