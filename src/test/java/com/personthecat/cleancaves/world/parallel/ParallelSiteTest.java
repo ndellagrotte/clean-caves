@@ -53,6 +53,23 @@ class ParallelSiteTest {
     }
 
     @Test
+    @DisplayName("the cost per unit is learned from the time helpers spend working, not from wall time")
+    void parallelCostUsesBusyTime() {
+        final ParallelSite site = new ParallelSite("test");
+        site.recordParallel(1000L, 2_000_000L, 3_000_000L);
+        assertThat(site.nsPerUnit()).isCloseTo(3000.0D, org.assertj.core.data.Offset.offset(0.0001D));
+    }
+
+    @Test
+    @DisplayName("a split that did no work is not recorded")
+    void idleSplitIsIgnored() {
+        final ParallelSite site = new ParallelSite("test");
+        site.recordParallel(1000L, 2_000_000L, 0L);
+        assertThat(site.nsPerUnit()).isNegative();
+        assertThat(site.speedup(1000L)).isNaN();
+    }
+
+    @Test
     @DisplayName("a size class that wins time keeps being split")
     void fastSplitsAreKept() {
         final ParallelSite site = new ParallelSite("test");

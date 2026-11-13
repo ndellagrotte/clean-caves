@@ -2,6 +2,7 @@ package com.personthecat.cleancaves.world.feature;
 
 import com.personthecat.cleancaves.CleanCaves;
 import com.personthecat.cleancaves.noise.CachedNoiseHelper;
+import com.personthecat.cleancaves.world.BiomeCache;
 import com.personthecat.cleancaves.world.GeneratorController;
 import com.personthecat.cleancaves.world.HeightMapLocator;
 
@@ -24,8 +25,9 @@ public class FeatureCaveHook implements IWorldGenerator {
 
         // Features are placed in the area offset by half a chunk, as with vanilla population.
         CachedNoiseHelper.begin(chunkX * 16 + 8, chunkZ * 16 + 8);
+        final BiomeCache biomeCache = new BiomeCache(world);
         for (GeneratorController generator : generators.values()) {
-            final WorldContext ctx = new WorldContext(heightmap, generator, rand, chunkX, chunkZ, world);
+            final WorldContext ctx = new WorldContext(heightmap, generator, rand, chunkX, chunkZ, world, biomeCache);
             generator.featureGenerate(ctx);
         }
         CachedNoiseHelper.end();

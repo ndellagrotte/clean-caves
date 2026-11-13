@@ -87,9 +87,8 @@ public final class ConfigFile {
     @Comment({
                     "Helper threads used for parallel cave generation.",
                     "0 = automatic: CPU threads minus a reserve for the server,",
-                    "the client renderer and Pulsar (capped at 7, because the",
-                    "server thread always works too). A positive value overrides",
-                    "the automatic choice, up to the same maximum of 7."
+                    "the client renderer and Pulsar, capped at 8 (the server",
+                    "thread always works too). A positive value overrides the", "automatic choice, up to 64."
             }) @RequiresMcRestart public static int maxGeneratorThreads = 0;
 
     private ConfigFile() { }

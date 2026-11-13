@@ -8,6 +8,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * only split when the measurement says it pays for the coordination. The numbers are deliberately
  * cheap and approximate: they only decide whether to split, never what the result is.
  *
+ * <p>The speedup of a split is measured from the time helpers actually spent inside the work
+ * against its wall time, so queued or idle helpers do not make a split look better than it was.
+ *
  * <p>This follows the workload detection used by CaveSpeedThing, which solves the same problem for
  * Better Caves. See the README for the reference.
  */
@@ -100,12 +103,13 @@ public final class ParallelSite {
         }
     }
 
-    void recordParallel(long units, long wallNanos, double estimatedNanos) {
-        if (wallNanos <= 0L || units <= 0L || estimatedNanos <= 0.0D) {
+    void recordParallel(long units, long wallNanos, long busyNanos) {
+        if (wallNanos <= 0L || busyNanos <= 0L || units <= 0L) {
             return;
         }
+        this.updateCost(busyNanos / (double) units);
         final Bucket bucket = this.bucket(units);
-        final double sample = estimatedNanos / wallNanos;
+        final double sample = busyNanos / (double) wallNanos;
         bucket.speedup = bucket.samples == 0 ? sample : bucket.speedup * 0.75D + sample * 0.25D;
         bucket.samples = Math.min(bucket.samples + 1, 1 << 20);
     }

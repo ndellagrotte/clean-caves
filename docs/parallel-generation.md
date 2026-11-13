@@ -67,23 +67,38 @@ stay sequential.
 
 - Block writes, decoration, ponds and wall/shell placement.
 - Anything that consumes `Random`.
-- Biome lookups through `BiomeProvider`.
+- Biome lookups through `BiomeProvider` or `World.getBiome`, which are made on the server thread
+  and memoized per chunk (see below).
 - Feature generation (`WorldContext`), structures and speleothems, which run during population.
-- Burrows and tunnel connectors: their per-column loops mix random choices with the writes, so
-  they keep the sequential path until the same separation can be made for them.
+- Burrows: their per-column loops mix random choices with the writes, so they keep the sequential
+  path until the same separation can be made for them. (Tunnel connectors still get the parallel
+  sphere fill, because they go through the same tunnel code.)
 
 Vanilla 1.12.2 generates one chunk at a time on the server thread, which is what makes sharing the
 compiled generators safe. The helper pool is an implementation detail of *one* chunk's generation;
-it does not generate several chunks at once.
+it does not generate several chunks at once. The compiled generators, their reusable buffers and
+the chunk-wide noise cache are single-threaded state, so generating two chunks concurrently on the
+same generator is not supported.
+
+## Biome lookups
+
+Biome generation is expensive and `BiomeProvider` is not thread-safe, so lookups cannot be moved
+to helpers. Instead, each chunk's generation creates one `BiomeCache` that memoizes the answer for
+a coordinate, keeping `World.getBiome` and `BiomeProvider.getBiome` apart because the former can
+prefer a loaded chunk's biome array. Stone layers are the main beneficiary: each layer used to ask
+for all 256 columns, so a preset with six layers paid for the same biome generation six times.
+Feature generation memoizes its lookups the same way for the chunk being populated.
 
 ## Workload detection
 
 Splitting is only worth it when the work is large enough to pay for handing it out. Every call site
 (`generation.layers`, `generation.caverns`, `generation.clusters`, `generation.spheres`) measures
 its own cost per unit of work and the speedup of previous splits, per size class, and keeps small
-work inline. The first calls of a session are inline, which is what teaches the site its cost.
-When a size class stops paying off, it is retried occasionally rather than never, because other
-work sharing the server thread can change how much a split is worth. A split always includes the
+work inline. The speedup is measured from the time helpers actually spent inside the work against
+the wall time of the split, as in the reference mod, so idle or queued helpers do not make a split
+look better than it was. The first calls of a session are inline, which is what teaches the site
+its cost. When a size class stops paying off, it is retried occasionally rather than never,
+because other work sharing the server thread can change how much a split is worth. A split always includes the
 server thread itself, and helpers pull indices from one shared counter, so no thread waits on work
 that has not started.
 
@@ -94,11 +109,45 @@ that has not started.
 | Option | Default | Meaning |
 |---|---|---|
 | `parallelGeneration` | `true` | `false` keeps every call inline on the server thread. |
-| `maxGeneratorThreads` | `0` | Helper threads; `0` chooses automatically. Capped at 7 either way. |
+| `maxGeneratorThreads` | `0` | Helper threads; `0` chooses automatically, capped at 8. A positive value overrides it, up to 64. |
 
 The automatic choice is CPU threads minus a reserve for the server thread, the client renderer
-and, when present, Pulsar's light workers (a third of the CPU threads, at least one). Machines with
-two or fewer CPU threads stay sequential.
+and, when present, Pulsar's light workers (a third of the CPU threads, at least one), capped at 8.
+Machines with two or fewer CPU threads stay sequential. The server thread always participates, so a
+split has one more worker than the helper count. Sphere fills merge bands in order, so they are
+limited to nine bands (eight helpers and the server thread).
 
 Helper threads are daemon threads named `CleanCaves-Worker-N`. They are created lazily and shut
 down when the server stops.
+
+## Compared with CaveSpeedThing
+
+This implementation was checked against the
+[CaveSpeedThing source](https://codeberg.org/ChristKind/CavespeedThing) at revision `561e043`
+(the 2.2.4 release plus its credits update). Adopted from it:
+
+- Pure noise work is computed ahead of the writing pass and applied sequentially on the server
+  thread.
+- Workload detection with the same constants and shape: a cost per unit learned from inline runs,
+  per-size-class speedup samples, a 1.15x keep threshold, and an occasional retry after a split
+  stops paying off.
+- Helper counts: automatic selection leaves room for the server, the client renderer and Pulsar,
+  capped at 8; the configured value can go up to 64; the server thread always participates and
+  helpers pull from one shared counter.
+- Biome lookups are memoized per chunk instead of being repeated by every generator.
+- Split speedup is measured from the time helpers actually spent in the work (`busyNanos`), not
+  from the wall time alone.
+
+Deliberate differences:
+
+- Clean Caves samples `FastNoise` directly at the coordinates it needs, so the parallel unit is a
+  column (256 per chunk) rather than a 4x4 section with an interpolated noise cube. Where a
+  cavern's noise is only needed for some y coordinates, the column task evaluates exactly those.
+- Tunnel and ravine segments split their sphere fills into x bands and merge them in order; the
+  reference applies its precomputed noise columns sequentially instead, which is the same split
+  between parallel pure work and sequential carving.
+- There is no re-entrancy guard. Clean Caves' cached-noise helper is one chunk-wide cache shared
+  by every generator, so concurrent chunk generation is already unsupported; a guard on one
+  generator could not make that safe. The assumption is documented above instead.
+- One `parallelGeneration` switch instead of separate noise and carving switches: both are the same
+  generator pipeline here.

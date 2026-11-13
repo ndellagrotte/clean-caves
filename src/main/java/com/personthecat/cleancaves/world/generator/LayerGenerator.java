@@ -5,7 +5,6 @@ import com.personthecat.cleancaves.model.Range;
 import com.personthecat.cleancaves.util.BlockMask;
 import com.personthecat.cleancaves.world.parallel.GenerationPool;
 
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -52,7 +51,7 @@ public class LayerGenerator extends BasicGenerator {
             final int actualX = x + (ctx.chunkX * 16);
             for (int z = 0; z < 16; z++) {
                 final int actualZ = z + (ctx.chunkZ * 16);
-                biomes[x << 4 | z] = ctx.world.getBiome(new BlockPos(actualX, 0, actualZ));
+                biomes[x << 4 | z] = ctx.biomeCache.getBiome(actualX, actualZ);
                 this.valid[x << 4 | z] = false;
                 this.masks[x << 4 | z].clear();
             }

@@ -5,7 +5,6 @@ import com.personthecat.cleancaves.model.Conditions;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 
@@ -30,7 +29,7 @@ public abstract class BasicGenerator {
     public void generate(PrimerContext ctx) {
         final int dim = ctx.world.provider.getDimension();
         if (conditions.dimensions.test(dim)) {
-            final Biome b = ctx.world.getBiome(new BlockPos(ctx.offsetX, 0, ctx.offsetZ));
+            final Biome b = ctx.biomeCache.getBiome(ctx.offsetX, ctx.offsetZ);
             if (conditions.biomes.test(b)) {
                 generateChecked(ctx);
             }

@@ -140,7 +140,7 @@ public class StalactiteGenerator extends FeatureGenerator {
         // difference would typically not be visible.
         for (int x = ctx.offsetX; x < ctx.offsetX + 16; x = x + resolution) {
             for (int z = ctx.offsetZ; z < ctx.offsetZ + 16; z = z + resolution) {
-                final Biome biome = ctx.world.getBiome(new BlockPos(x, 0, z));
+                final Biome biome = ctx.biomeCache.getBiome(x, z);
                 if (conditions.biomes.test(biome) && conditions.region.GetBoolean(x, z)) {
                     this.generateRegion(ctx, localRand, x, z);
                 }

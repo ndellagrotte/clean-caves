@@ -18,6 +18,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntConsumer;
 
@@ -45,8 +46,11 @@ public final class GenerationPool {
     /** The position lists of a tunnel, ravine or room segment. */
     public static final ParallelSite SPHERE_FILL = new ParallelSite("generation.spheres");
 
-    /** The widest a single piece of work is split, in bands. Keeps the merges cheap. */
-    public static final int MAX_BANDS = 8;
+    /**
+     * The widest a single piece of work is split, in bands. Keeps the merges cheap. One more than
+     * the automatic helper count, because the server thread fills one band itself.
+     */
+    public static final int MAX_BANDS = 9;
 
     private static final Object LOCK = new Object();
     private static final AtomicInteger THREAD_ID = new AtomicInteger();
@@ -128,9 +132,8 @@ public final class GenerationPool {
             return;
         }
         final long units = Math.max(1L, unitsPerTask) * tasks;
-        final int bands = bandCount(site, units, tasks);
-        final ThreadPoolExecutor executor = bands > 1 ? executor() : null;
-        final int workers = executor == null ? 0 : Math.min(helperCount(), bands - 1);
+        final ThreadPoolExecutor executor = enabled() && site.shouldParallelize(units) ? executor() : null;
+        final int workers = executor == null ? 0 : Math.min(helperCount(), tasks - 1);
         if (workers <= 0) {
             runInline(site, tasks, units, body);
             return;
@@ -161,16 +164,23 @@ public final class GenerationPool {
             IntConsumer body) {
         final AtomicInteger next = new AtomicInteger();
         final AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicLong busyNanos = new AtomicLong();
         final Runnable work = () -> {
+            final long start = System.nanoTime();
+            boolean worked = false;
             int index;
             while ((index = next.getAndIncrement()) < tasks) {
+                worked = true;
                 try {
                     body.accept(index);
                 } catch (Throwable t) {
                     error.compareAndSet(null, t);
                     next.set(tasks);
-                    return;
+                    break;
                 }
+            }
+            if (worked) {
+                busyNanos.addAndGet(System.nanoTime() - start);
             }
         };
         final List<Future<?>> futures = new ArrayList<>(helperCount);
@@ -195,8 +205,7 @@ public final class GenerationPool {
             }
         }
         final long end = System.nanoTime();
-        final double estimated = site.nsPerUnit() * units;
-        site.recordParallel(units, end - start, estimated);
+        site.recordParallel(units, end - start, busyNanos.get());
         final Throwable thrown = error.get();
         if (thrown != null) {
             rethrow(thrown);
@@ -237,8 +246,7 @@ public final class GenerationPool {
         final int configured = ConfigFile.maxGeneratorThreads;
         final int cpus = Runtime.getRuntime().availableProcessors();
         if (configured > 0) {
-            // More helpers than bands would just queue up behind each other.
-            final int value = Math.min(configured, MAX_BANDS - 1);
+            final int value = Math.min(configured, 64);
             log.info("Using {} helper thread(s) (configured, {} CPU threads).", value, cpus);
             return value;
         }
@@ -249,7 +257,7 @@ public final class GenerationPool {
         final boolean client = isClientSide();
         // Leave room for the server thread itself, the client renderer and, when installed, Pulsar.
         final int reserve = (client ? 4 : 2) + (isLoaded("pulsar") ? Math.max(1, cpus / 3) : 0);
-        // The server thread always works too, so never ask for more helpers than that thread can use.
+        // Matches the automatic ceiling of the reference mod. The server thread always works too.
         final int value = Math.max(1, Math.min(cpus - reserve, MAX_BANDS - 1));
         log.info("Using {} helper thread(s) (auto: {} CPU threads, {} side, Pulsar present: {}).", value, cpus,
                 client ? "client" : "server", isLoaded("pulsar"));

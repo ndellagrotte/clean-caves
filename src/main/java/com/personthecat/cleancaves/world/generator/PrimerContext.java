@@ -1,6 +1,7 @@
 package com.personthecat.cleancaves.world.generator;
 
 import com.personthecat.cleancaves.util.XoRoShiRo;
+import com.personthecat.cleancaves.world.BiomeCache;
 import com.personthecat.cleancaves.world.BiomeSearch;
 
 import net.minecraft.world.World;
@@ -15,6 +16,9 @@ public class PrimerContext {
     private static final long SEED_Z = 132897987541L;
 
     final BiomeSearch biomes;
+
+    /** Biome lookups for this chunk, shared by every generator. Main thread only. */
+    final BiomeCache biomeCache;
     final int[][] heightmap;
     final World world;
     final Random localRand;
@@ -24,9 +28,10 @@ public class PrimerContext {
     final int offsetZ;
     final ChunkPrimer primer;
 
-    public PrimerContext(BiomeSearch biomes, int[][] heightmap, World world, int chunkX, int chunkZ,
-            ChunkPrimer primer) {
+    public PrimerContext(BiomeSearch biomes, int[][] heightmap, World world, int chunkX, int chunkZ, ChunkPrimer primer,
+            BiomeCache biomeCache) {
         this.biomes = biomes;
+        this.biomeCache = biomeCache;
         this.heightmap = heightmap;
         this.world = world;
         this.localRand = new XoRoShiRo(chunkSeed(world.getSeed(), chunkX, chunkZ));

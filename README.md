@@ -55,12 +55,16 @@ Whether a particular workload is split is decided from measured timings. Small w
 where coordination costs more than it saves) stays on the server thread; the server thread always
 takes a share of whatever is split, so a split never waits on a helper that has not started.
 
+Biome lookups stay on the server thread, but each chunk now memoizes them: every generator that
+asks for the same column or chunk centre reuses the first answer, which matters most for the stone
+layer presets, where one preset asks for all 256 columns again for each of its layers.
+
 Two settings in `config/cleancaves.cfg` control it:
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `parallelGeneration` | `true` | Set to `false` to keep all generation on the server thread. |
-| `maxGeneratorThreads` | `0` | Helper threads. `0` picks CPU threads minus a reserve for the server, the client renderer and Pulsar, capped at 7. A positive value overrides that, up to 7. |
+| `maxGeneratorThreads` | `0` | Helper threads. `0` picks CPU threads minus a reserve for the server, the client renderer and Pulsar, capped at 8. A positive value overrides that, up to 64. |
 
 The design is modelled on [CaveSpeedThing](https://www.curseforge.com/minecraft/mc-mods/cavespeedthing)
 by ChristKind, which parallelizes Better Caves carving, and on

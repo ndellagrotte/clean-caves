@@ -58,7 +58,7 @@ public class StructureGenerator extends FeatureGenerator {
     @Override
     protected void doGenerate(WorldContext ctx) {
         final BlockPos center = new BlockPos(ctx.offsetX, 0, ctx.offsetZ);
-        if (conditions.biomes.test(ctx.world.getBiome(center))) {
+        if (conditions.biomes.test(ctx.biomeCache.getBiome(center.getX(), center.getZ()))) {
             for (int i = 0; i < cfg.count(); i++) {
                 if (ctx.rand.nextDouble() <= cfg.chance()) {
                     this.generateSingle(ctx);

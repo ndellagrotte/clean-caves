@@ -3,6 +3,7 @@ package com.personthecat.cleancaves.world.generator;
 import com.personthecat.cleancaves.CleanCaves;
 import com.personthecat.cleancaves.config.ConfigFile;
 import com.personthecat.cleancaves.noise.CachedNoiseHelper;
+import com.personthecat.cleancaves.world.BiomeCache;
 import com.personthecat.cleancaves.world.BiomeSearch;
 import com.personthecat.cleancaves.world.GeneratorController;
 import com.personthecat.cleancaves.world.HeightMapLocator;
@@ -36,8 +37,9 @@ public class EarlyCaveHook extends MapGenBase {
                 ? HeightMapLocator.getHeightFromPrimer(primer)
                 : HeightMapLocator.FAUX_MAP;
 
-        final BiomeSearch biomes = BiomeSearch.in(world, x, z);
-        final PrimerContext ctx = new PrimerContext(biomes, heightmap, world, x, z, primer);
+        final BiomeCache biomeCache = new BiomeCache(world);
+        final BiomeSearch biomes = BiomeSearch.in(biomeCache, x, z);
+        final PrimerContext ctx = new PrimerContext(biomes, heightmap, world, x, z, primer, biomeCache);
         ctx.world.rand.setSeed(ctx.world.getSeed());
         CachedNoiseHelper.begin(x * 16, z * 16);
         for (GeneratorController generator : generators.values()) {

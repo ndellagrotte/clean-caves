@@ -37,7 +37,7 @@ public class PillarGenerator extends FeatureGenerator {
             // Avoid pillars spawning right next to each other.
             final int x = ((rand.nextInt(6) * 2) + 2) + (ctx.chunkX * 16); // 2 to 14
             final int z = ((rand.nextInt(6) * 2) + 1) + (ctx.chunkZ * 16); // 1 to 13
-            final Biome biome = ctx.world.getBiome(new BlockPos(x, 0, z));
+            final Biome biome = ctx.biomeCache.getBiome(x, z);
 
             if (conditions.biomes.test(biome)) {
                 final Range height = conditions.getColumn(x, z);

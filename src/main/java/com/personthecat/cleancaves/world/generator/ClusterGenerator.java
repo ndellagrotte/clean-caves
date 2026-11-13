@@ -84,7 +84,7 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
         // Always reset the seed for clusters.
         ctx.world.rand.setSeed(ctx.world.getSeed());
         this.clusterMap.clear();
-        this.locateFinalClusters(ctx.world, ctx.world.rand, ctx.chunkX, ctx.chunkZ);
+        this.locateFinalClusters(ctx, ctx.world.rand, ctx.chunkX, ctx.chunkZ);
         this.gatherScopes();
         if (this.ordered.isEmpty()) {
             return;
@@ -123,7 +123,7 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
         }
     }
 
-    private void locateFinalClusters(World world, Random rand, int chunkX, int chunkZ) {
+    private void locateFinalClusters(PrimerContext ctx, Random rand, int chunkX, int chunkZ) {
         forEachFeature((cfg, conditions) -> {
             final int cRadiusX = (cfg.radiusX().max() / 16) + 1;
             final int cRadiusZ = (cfg.radiusZ().max() / 16) + 1;
@@ -137,7 +137,7 @@ public class ClusterGenerator extends ListGenerator<ClusterSettings> {
                     // Get absolute coordinates, generate in the center.
                     final int x = (cx * 16) + 8;
                     final int z = (cz * 16) + 8;
-                    final Biome b = world.getBiomeProvider().getBiome(new BlockPos(x, 0, z));
+                    final Biome b = ctx.biomeCache.getProviderBiome(x, z);
                     if (conditions.biomes.test(b)) {
                         for (Pair<IBlockState, Integer> pair : cfg.states()) {
                             final IBlockState state = pair.getLeft();
